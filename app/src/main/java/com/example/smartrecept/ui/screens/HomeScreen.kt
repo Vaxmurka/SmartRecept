@@ -14,18 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.smartrecept.data.settings.UserPreferencesRepository
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.ui.components.CustomCard
@@ -39,8 +35,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 fun HomeScreen(
     repository: UserPreferencesRepository,
     navController: NavHostController,
-    viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)),
-    previewViewModel: PreviewRecipeViewModel? = null
+    viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application))
 ) {
     val scope = rememberCoroutineScope()
     val preferences by repository.preferencesFlow.collectAsState(initial = UserPreferences())
@@ -156,8 +151,6 @@ fun HomeScreenContent(
                         RoundedCornerShape(16.dp)
                     index == 0 ->
                         RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-//                    index == filteredRecipes.lastIndex ->
-//                        RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
                     else ->
                         RectangleShape
                 }

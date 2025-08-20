@@ -611,16 +611,3 @@ fun ImagePickerBottomSheet(
         }
     }
 }
-
-@Preview(showBackground = true, device = "id:pixel_9a")
-@Composable
-fun AddEditRecipeScreenPreview_EditMode() {
-    MaterialTheme {
-        val navController = rememberNavController()
-
-        AddEditRecipeScreen(
-            navController = navController,
-            recipeId = 2 // Режим редактирования
-        )
-    }
-}

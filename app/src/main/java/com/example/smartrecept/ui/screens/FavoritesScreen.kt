@@ -19,9 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.ui.components.CustomCard
@@ -129,14 +127,4 @@ fun FavoritesView(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FavoritesPreview() {
-    val navController = rememberNavController()
-    val context = LocalContext.current
-    val userPrefsRepo = remember { UserPreferencesRepository(context) }
-
-    FavoritesScreen(repository = userPrefsRepo, navController = navController)
 }

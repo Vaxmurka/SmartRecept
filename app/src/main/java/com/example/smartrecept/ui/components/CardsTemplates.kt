@@ -230,7 +230,6 @@ fun RecipeDayCard(recipe: Recipe, navController: NavHostController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-//            .padding(16.dp)
             .clickable { navController.navigate("recipe/${recipe.id}") }, // переход,
         contentAlignment = Alignment.BottomStart
     ) {
@@ -431,7 +430,7 @@ fun getTagColor(tag: String): Color {
     val hash = tag.hashCode()
     val hue = (hash % 360).toFloat() // от 0 до 360 градусов по кругу
     val saturation = 0.2f            // пастельность
-    val value = 0.7f                // яркость
+    val value = 0.7f                 // яркость
 
     val c = value * saturation
     val x = c * (1 - abs((hue / 60f) % 2 - 1))

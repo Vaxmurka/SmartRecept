@@ -202,12 +202,6 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun updateRecipeNotes(recipeId: Int, newNotes: List<String>) {
-        viewModelScope.launch {
-            dataSource.updateRecipeNotes(recipeId, newNotes)
-        }
-    }
-
     // Добавляем в RecipeViewModel
     fun saveCookingNotes(
         recipeId: Int,
@@ -247,24 +241,5 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun updateRecipe(updatedRecipe: Recipe) {
-        viewModelScope.launch {
-            dataSource.updateRecipe(updatedRecipe)
-        }
-    }
-
     // Дополнительные методы по мере необходимости
-}
-
-interface RecipeViewModelInterface {
-    val recipes: State<List<Recipe>>
-    val isLoading: State<Boolean>
-    fun loadRecipes()
-}
-
-// Фиктивная реализация для превью
-class PreviewRecipeViewModel : RecipeViewModelInterface {
-    override val recipes = mutableStateOf(emptyList<Recipe>())
-    override val isLoading = mutableStateOf(false)
-    override fun loadRecipes() {}
 }

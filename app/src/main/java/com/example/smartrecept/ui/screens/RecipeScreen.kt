@@ -102,7 +102,6 @@ private fun RecipeDetailContent(
     onCookedToggle: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val isDarken = getSystemTheme(LocalContext.current)
     Scaffold(
         topBar = {
             TopAppBar(

@@ -43,7 +43,7 @@ import com.example.smartrecept.ui.screens.SearchScreen
 import com.example.smartrecept.ui.screens.HomeScreen
 import com.example.smartrecept.ui.screens.FavoritesScreen
 import com.example.smartrecept.ui.screens.JournalScreen
-import com.example.smartrecept.ui.screens.PreviewRecipeViewModel
+//import com.example.smartrecept.ui.screens.PreviewRecipeViewModel
 import com.example.smartrecept.ui.screens.RecipeDetailScreen
 
 import com.example.smartrecept.ui.theme.SmartReceptTheme
@@ -283,21 +283,5 @@ fun NavGraphBuilder.animatedComposable(
         }
     ) { backStackEntry ->
         content(backStackEntry)
-    }
-}
-
-@Preview(showBackground = true, name = "Home Screen", device = "spec:width=411dp,height=891dp")
-@Composable
-fun HomeScreenPreview() {
-    SmartReceptTheme {
-        val navController = rememberNavController()
-        val mockRepo = UserPreferencesRepository(LocalContext.current)
-        val previewViewModel = PreviewRecipeViewModel()
-
-        HomeScreen(
-            repository = mockRepo,
-            navController = navController,
-            previewViewModel = previewViewModel
-        )
     }
 }
