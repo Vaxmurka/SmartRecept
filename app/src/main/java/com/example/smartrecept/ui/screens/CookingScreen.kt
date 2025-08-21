@@ -4,6 +4,8 @@ package com.example.smartrecept.ui.screens
 import RecipeViewModelFactory
 import android.annotation.SuppressLint
 import android.app.Application
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,8 +58,11 @@ import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.recipes.toEnhancedCookingSteps
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.data.settings.UserPreferencesRepository
+import com.example.smartrecept.ui.components.CameraScreen
 import com.example.smartrecept.ui.components.CollapsibleCard
 import kotlinx.coroutines.delay
+import okhttp3.MediaType.Companion.toMediaType
+import java.io.File
 
 
 @Composable
@@ -326,18 +332,22 @@ fun CookingStepScreen(
 
             // Контент шага
             Column(modifier = Modifier) {
-                currentStep.imageUrl?.let { url ->
-                    AsyncImage(
-                        model = url,
-                        contentDescription = "Шаг ${currentStepIndex + 1}",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                // Фото шага
+                val model: Any = if (currentStep.imageUrl!!.startsWith("/")) {
+                    Uri.fromFile(File(currentStep.imageUrl))
+                } else {
+                    currentStep.imageUrl // это может быть http(s) или content:// (для старых записей)
                 }
+
+                AsyncImage(
+                    model = model,
+                    contentDescription = "Шаг ${currentStepIndex + 1}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
 
                 Text(
                     text = currentStep.description,

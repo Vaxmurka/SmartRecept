@@ -91,4 +91,14 @@ object DatabaseMigrations {
             database.execSQL("ALTER TABLE recipes ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
         }
     }
+
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // Добавляем поле как NULLABLE
+            database.execSQL("ALTER TABLE recipes ADD COLUMN stepImages TEXT")
+
+            // Для существующих записей устанавливаем пустой список
+            database.execSQL("UPDATE recipes SET stepImages = '[]' WHERE stepImages IS NULL")
+        }
+    }
 }

@@ -17,7 +17,14 @@ data class Recipe(
     val isCooked: Boolean = false,
     val ingredients: List<String>,
     val steps: List<String>,
-    var notes: List<String>
+    var notes: List<String>,
+    val stepImages: List<String?> = emptyList(),
+)
+
+// Data class для хранения информации о шаге с фото
+data class RecipeStep(
+    val text: String = "",
+    val imageUri: String? = null
 )
 
 data class CookingStep(
@@ -29,17 +36,17 @@ data class CookingStep(
 )
 
 fun Recipe.toEnhancedCookingSteps(): List<CookingStep> {
-    val stepPattern = """!\[(.*?)\]\((.*?)\)""".toRegex() // ![alt text](image_url)
     val timerPattern = """ (\d+) мин""".toRegex()
 
     return this.steps.mapIndexed { index, stepText ->
-        val timerMinutes = timerPattern.find(stepText)?.groupValues?.get(1)?.toIntOrNull()
-//        val (imageAlt, imageUrl) = stepPattern.find(stepText)?.destructured ?: Pair("", null)
+        val timerMinutes = timerPattern.find(stepText)
+            ?.groupValues?.get(1)
+            ?.toIntOrNull()
 
         CookingStep(
             description = stepText,
-            imageUrl = if (index == this.steps.size - 1) this.image else null,
-            notes = null,
+            imageUrl = if (index != steps.lastIndex) stepImages.getOrNull(index)?.takeIf { it.isNotBlank() } else this.image,
+            notes = notes.getOrNull(index),
             timerMinutes = timerMinutes
         )
     }

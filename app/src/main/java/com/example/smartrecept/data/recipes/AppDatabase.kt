@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.smartrecept.data.models.migrations.DatabaseMigrations
 
-@Database(entities = [Recipe::class], version = 5)
+@Database(entities = [Recipe::class], version = 6)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeDao(): RecipeDao
@@ -21,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 "recipes_db"
             )
-                .addMigrations(DatabaseMigrations.MIGRATION_4_5)
+                .addMigrations(DatabaseMigrations.MIGRATION_5_6)
                 .build()
         }
     }

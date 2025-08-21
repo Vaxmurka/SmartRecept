@@ -117,7 +117,7 @@ fun SettingsApp(
             Text("Язык", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             TextButton(onClick = {
                 scope.launch {
-                    val newLang = if (preferences.language == "en") "ru" else "enz"
+                    val newLang = if (preferences.language == "en") "ru" else "en"
                     repository.updateLanguage(newLang)
                 }
             }) {
@@ -136,15 +136,5 @@ fun SettingsApp(
         ) {
             Text("Очистить избранное", color = MaterialTheme.colorScheme.onErrorContainer)
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SettingsPreview() {
-    MaterialTheme {
-        val context = LocalContext.current
-        val userPrefsRepo = remember { UserPreferencesRepository(context) }
-        SettingsApp(userPrefsRepo, Modifier)
     }
 }

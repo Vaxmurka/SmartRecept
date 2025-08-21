@@ -55,8 +55,10 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     implementation(libs.androidx.appcompat)
+    implementation(libs.firebase.crashlytics.buildtools)
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     // Compose BOM
     implementation(platform("androidx.compose:compose-bom:2024.05.00"))
@@ -84,4 +86,11 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.05.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+
+    // CameraX - только то, что нужно для вашего CameraScreen
+    implementation("androidx.camera:camera-camera2:1.3.0")
+    implementation("androidx.camera:camera-lifecycle:1.3.0")
+    implementation("androidx.camera:camera-view:1.3.0")
+
+    implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
 }

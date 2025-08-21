@@ -112,6 +112,7 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
         servings: Int,
         ingredients: List<String>,
         steps: List<String>,
+        stepImages: List<String?>,
         notes: List<String>,
         navController: NavHostController
     ) {
@@ -128,6 +129,7 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
                         isFavorite = false,
                         ingredients = ingredients.filter { it.isNotBlank() },
                         steps = steps.filter { it.isNotBlank() },
+                        stepImages = stepImages,
                         notes = notes.filter { it.isNotBlank() }
                     )
                     dataSource.insertRecipe(newRecipe)
@@ -143,6 +145,7 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
                         isFavorite = dataSource.isFavorite(id),
                         ingredients = ingredients.filter { it.isNotBlank() },
                         steps = steps.filter { it.isNotBlank() },
+                        stepImages = stepImages,
                         notes = notes.filter { it.isNotBlank() }
                     )
                     dataSource.updateRecipe(updatedRecipe)

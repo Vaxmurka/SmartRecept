@@ -1,6 +1,6 @@
 package com.example.smartrecept
 
-import AddEditRecipeScreen
+import com.example.smartrecept.ui.screens.AddEditRecipeScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.*
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.data.settings.UserPreferencesRepository
@@ -27,7 +26,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -36,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import com.example.smartrecept.data.recipes.DatasourceRecipes
+import com.example.smartrecept.ui.components.CameraScreen
 import com.example.smartrecept.ui.screens.CookingScreen
 
 import com.example.smartrecept.ui.screens.SettingsScreen
@@ -43,7 +42,6 @@ import com.example.smartrecept.ui.screens.SearchScreen
 import com.example.smartrecept.ui.screens.HomeScreen
 import com.example.smartrecept.ui.screens.FavoritesScreen
 import com.example.smartrecept.ui.screens.JournalScreen
-//import com.example.smartrecept.ui.screens.PreviewRecipeViewModel
 import com.example.smartrecept.ui.screens.RecipeDetailScreen
 
 import com.example.smartrecept.ui.theme.SmartReceptTheme
@@ -196,7 +194,22 @@ fun SmartReceptApp() {
                     HomeScreen(repository = userPrefsRepo, navController = navController)
                 }
                 animatedComposable(Screen.Search.route) {
-                    SearchScreen(repository = userPrefsRepo, navController = navController)
+//                    SearchScreen(repository = userPrefsRepo, navController = navController)
+                }
+                // В NavGraph
+                animatedComposable("camera/{purpose}") { backStackEntry ->
+                    val purpose = backStackEntry.arguments?.getString("purpose") ?: "main"
+                    CameraScreen(
+                        purpose = purpose,
+                        onImageCaptured = { uri, purpose ->
+                            navController.previousBackStackEntry?.savedStateHandle?.set("camera_result", uri.toString())
+                            navController.previousBackStackEntry?.savedStateHandle?.set("camera_purpose", purpose)
+                            navController.popBackStack()
+                        },
+                        onError = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
                 animatedComposable(Screen.Favorites.route) {
                     FavoritesScreen(repository = userPrefsRepo, navController = navController)
