@@ -180,6 +180,12 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun clearAll() {
+        viewModelScope.launch {
+            dataSource.clearDataBase()
+        }
+    }
+
 
     private val _cookedRecipes = dataSource.getCookedRecipesFlow()
         .stateIn(

@@ -191,7 +191,11 @@ fun RecipeInDay(
 
     // При первом запуске
     LaunchedEffect(recipes) {
-        if (recipeDay == null) {
+        if (recipes.isEmpty()) {
+            // Если рецептов нет, очищаем рецепт дня
+            viewModel.updateRecipeOfTheDay(emptyList())
+        } else if (recipeDay == null || !recipes.any { it.id == recipeDay?.id }) {
+            // Если рецепт дня null или был удален, выбираем новый
             viewModel.updateRecipeOfTheDay(recipes)
         }
     }

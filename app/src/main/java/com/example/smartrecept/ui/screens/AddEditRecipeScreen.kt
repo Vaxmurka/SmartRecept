@@ -1,9 +1,13 @@
 package com.example.smartrecept.ui.screens
 
 import RecipeViewModelFactory
+import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -34,12 +38,12 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,8 +52,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,18 +64,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.smartrecept.data.recipes.RecipeStep
 import com.example.smartrecept.filterChipsList
+import okhttp3.MediaType.Companion.toMediaType
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.max
-import androidx.core.net.toUri
 
 // ----------------------------
 // Утилиты для сохранения фото
@@ -357,8 +362,6 @@ fun StepWithImageBlock(
             imageUri = step.imageUri,
             onImageChanged = onImageSelected
         )
-
-
     }
 }
 
@@ -376,31 +379,46 @@ fun StepImageBlock(
 
     val photoFile = remember { createImageFile(context, "step_$stepIndex") }
     val photoUri = remember(photoFile) {
-        androidx.core.content.FileProvider.getUriForFile(
+        FileProvider.getUriForFile(
             context,
             "${context.packageName}.provider",
             photoFile
         )
     }
 
+    // --- Камера ---
     val launcherCamera = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            onImageChanged(photoFile.absolutePath) // <<< путь
+            onImageChanged(photoFile.absolutePath) // сохраняем путь
         }
     }
 
+    // --- Галерея ---
     val launcherGallery = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
             context.copyUriToInternalStorage(it, "step_$stepIndex") { savedPath ->
-                if (savedPath != null) onImageChanged(savedPath) // <<< путь
+                if (savedPath != null) onImageChanged(savedPath)
             }
         }
     }
 
+    // --- Разрешение на камеру ---
+    val cameraPermission = Manifest.permission.CAMERA
+    val launcherPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launcherCamera.launch(photoUri)
+        } else {
+            Toast.makeText(context, "Камера недоступна без разрешения", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // --- Если картинки нет и ссылка не задана → вообще не рисуем блок ---
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -411,20 +429,21 @@ fun StepImageBlock(
         contentAlignment = Alignment.Center
     ) {
         if (!imageUri.isNullOrBlank()) {
+            // Для локального пути безопаснее обернуть в file://
             val model = if (imageUri.startsWith("/")) {
                 Uri.fromFile(File(imageUri))
             } else imageUri
 
             AsyncImage(
                 model = model,
-                contentDescription = "Step Image",
+                contentDescription = "Recipe Image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.PhotoCamera, null, tint = Color.Gray, modifier = Modifier.size(32.dp))
-                Text("Фото шага", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                Icon(Icons.Default.PhotoCamera, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
+                Text("Добавить фото", color = Color.Gray)
             }
         }
     }
@@ -433,16 +452,27 @@ fun StepImageBlock(
         ImagePickerBottomSheet(
             onPickCamera = {
                 showSheet = false
-                launcherCamera.launch(photoUri)
+                if (ContextCompat.checkSelfPermission(context, cameraPermission) ==
+                    PackageManager.PERMISSION_GRANTED
+                ) {
+                    launcherCamera.launch(photoUri)
+                } else {
+                    launcherPermission.launch(cameraPermission)
+                }
             },
             onPickGallery = {
                 showSheet = false
                 launcherGallery.launch("image/*")
             },
+            onPickUrl = {
+                showSheet = false
+                onImageChanged(it.trim())
+            },
             onDismiss = { showSheet = false }
         )
     }
 }
+
 
 // ----------------------------
 // Фото для рецепта
@@ -470,7 +500,7 @@ fun RecipeImageBlock(
         ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            onImageChanged(photoFile.absolutePath) // <<< сохраняем абсолютный путь
+            onImageChanged(photoFile.absolutePath) // сохраняем абсолютный путь
         }
     }
 
@@ -482,6 +512,18 @@ fun RecipeImageBlock(
             context.copyUriToInternalStorage(it, "main") { savedPath ->
                 if (savedPath != null) onImageChanged(savedPath)
             }
+        }
+    }
+
+    // Разрешения на камеру
+    val cameraPermission = Manifest.permission.CAMERA
+    val launcherPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launcherCamera.launch(photoUri)
+        } else {
+            Toast.makeText(context, "Камера недоступна без разрешения", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -523,11 +565,21 @@ fun RecipeImageBlock(
         ImagePickerBottomSheet(
             onPickCamera = {
                 showSheet = false
-                launcherCamera.launch(photoUri)
+                if (ContextCompat.checkSelfPermission(context, cameraPermission) ==
+                    PackageManager.PERMISSION_GRANTED
+                ) {
+                    launcherCamera.launch(photoUri)
+                } else {
+                    launcherPermission.launch(cameraPermission)
+                }
             },
             onPickGallery = {
                 showSheet = false
                 launcherGallery.launch("image/*")
+            },
+            onPickUrl = { url ->
+                showSheet = false
+                onImageChanged(url.trim())
             },
             onDismiss = { showSheet = false }
         )
@@ -543,11 +595,50 @@ fun RecipeImageBlock(
 fun ImagePickerBottomSheet(
     onPickCamera: () -> Unit,
     onPickGallery: () -> Unit,
+    onPickUrl: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var showUrlDialog by remember { mutableStateOf(false) }
+    var urlText by remember { mutableStateOf("") }
+
+    if (showUrlDialog) {
+        AlertDialog(
+            onDismissRequest = { showUrlDialog = false },
+            title = { Text("Вставить ссылку на изображение") },
+            text = {
+                OutlinedTextField(
+                    value = urlText,
+                    onValueChange = { urlText = it },
+                    placeholder = { Text("https://example.com/photo.png") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (urlText.isNotBlank()) {
+                        onPickUrl(urlText.trim())
+                        urlText = ""
+                        showUrlDialog = false
+                        onDismiss()
+                    }
+                }) {
+                    Text("Добавить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUrlDialog = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -563,6 +654,10 @@ fun ImagePickerBottomSheet(
                 onClick = onPickGallery,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("🖼 Галерея") }
+            Button(
+                onClick = { showUrlDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("🌐 Вставить ссылку") }
             OutlinedButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
@@ -570,6 +665,7 @@ fun ImagePickerBottomSheet(
         }
     }
 }
+
 
 // ----------------------------
 // Теги

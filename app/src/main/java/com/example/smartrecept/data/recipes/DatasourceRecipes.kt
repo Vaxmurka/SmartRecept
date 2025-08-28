@@ -3,6 +3,7 @@ package com.example.smartrecept.data.recipes
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
@@ -331,6 +332,12 @@ class DatasourceRecipes(private val context: Context) {
 
     suspend fun updateRecipeNotes(recipeId: Int, notes: List<String>) {
         recipeDao.updateNotes(recipeId, notes)
+    }
+
+    suspend fun clearDataBase() {
+        withContext(Dispatchers.IO) {
+            recipeDao.clearAll()
+        }
     }
 
     suspend fun replaceAllRecipesWithCatalog() {

@@ -23,6 +23,9 @@ interface RecipeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(recipe: Recipe): Long // Возвращает новый ID
 
+    @Query("DELETE FROM recipes")
+    suspend fun clearAll()
+
     @Update
     suspend fun update(recipe: Recipe)
 
@@ -43,7 +46,4 @@ interface RecipeDao {
 
     @Query("UPDATE recipes SET notes = :notes WHERE id = :recipeId")
     suspend fun updateNotes(recipeId: Int, notes: List<String>)
-
-    @Query("DELETE FROM recipes")
-    suspend fun clearAll()
 }

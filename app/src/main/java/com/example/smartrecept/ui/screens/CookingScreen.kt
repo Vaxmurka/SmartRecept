@@ -333,21 +333,24 @@ fun CookingStepScreen(
             // Контент шага
             Column(modifier = Modifier) {
                 // Фото шага
-                val model: Any = if (currentStep.imageUrl!!.startsWith("/")) {
-                    Uri.fromFile(File(currentStep.imageUrl))
-                } else {
-                    currentStep.imageUrl // это может быть http(s) или content:// (для старых записей)
-                }
+                currentStep.imageUrl?.let {
+                    Log.d("COOK_INFO", it)
+                    val model: Any = if (currentStep.imageUrl.startsWith("/")) {
+                        Uri.fromFile(File(currentStep.imageUrl))
+                    } else {
+                        currentStep.imageUrl // это может быть http(s) или content:// (для старых записей)
+                    }
 
-                AsyncImage(
-                    model = model,
-                    contentDescription = "Шаг ${currentStepIndex + 1}",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                    AsyncImage(
+                        model = model,
+                        contentDescription = "Шаг ${currentStepIndex + 1}",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
                 Text(
                     text = currentStep.description,
