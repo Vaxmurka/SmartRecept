@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import com.example.smartrecept.data.recipes.DatasourceRecipes
@@ -43,6 +44,7 @@ import com.example.smartrecept.ui.screens.HomeScreen
 import com.example.smartrecept.ui.screens.FavoritesScreen
 import com.example.smartrecept.ui.screens.JournalScreen
 import com.example.smartrecept.ui.screens.RecipeDetailScreen
+import com.example.smartrecept.ui.screens.RecipeViewModel
 
 import com.example.smartrecept.ui.theme.SmartReceptTheme
 import kotlinx.coroutines.CoroutineScope
@@ -194,7 +196,7 @@ fun SmartReceptApp() {
                     HomeScreen(repository = userPrefsRepo, navController = navController)
                 }
                 animatedComposable(Screen.Search.route) {
-//                    SearchScreen(repository = userPrefsRepo, navController = navController)
+                    SearchScreen(repository = userPrefsRepo, navController = navController)
                 }
                 // В NavGraph
                 animatedComposable("camera/{purpose}") { backStackEntry ->

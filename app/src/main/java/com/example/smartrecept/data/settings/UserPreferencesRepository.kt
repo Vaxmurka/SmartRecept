@@ -4,6 +4,7 @@ package com.example.smartrecept.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.smartrecept.ui.screens.FontSizeOption
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.Flow
 
@@ -14,6 +15,7 @@ class UserPreferencesRepository(private val context: Context) {
     companion object {
         private val DARK_THEME_KEY = booleanPreferencesKey("dark_theme")
         private val FONT_SCALE_KEY = floatPreferencesKey("font_scale")
+        private val FONT_KEY = stringPreferencesKey("font")
         private val LANGUAGE_KEY = stringPreferencesKey("language")
         private val THEME_MODE = stringPreferencesKey("theme_mode")
     }
@@ -22,6 +24,7 @@ class UserPreferencesRepository(private val context: Context) {
         UserPreferences(
             isDarkTheme = prefs[DARK_THEME_KEY] ?: false,
             fontScale = prefs[FONT_SCALE_KEY] ?: 1.0f,
+            font = prefs[FONT_KEY] ?: FontSizeOption.M.label,
             language = prefs[LANGUAGE_KEY] ?: "en",
             themeMode = prefs[THEME_MODE] ?: "system"
         )
@@ -33,6 +36,10 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun updateFontScale(scale: Float) {
         context.dataStore.edit { it[FONT_SCALE_KEY] = scale }
+    }
+
+    suspend fun updateFont(font: FontSizeOption) {
+        context.dataStore.edit { it[FONT_KEY] = font.label }
     }
 
     suspend fun updateLanguage(lang: String) {

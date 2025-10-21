@@ -2,6 +2,7 @@
 package com.example.smartrecept.data.recipes
 import android.content.Context
 import android.util.Log
+import androidx.room.Transaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -340,15 +341,14 @@ class DatasourceRecipes(private val context: Context) {
         }
     }
 
-    suspend fun replaceAllRecipesWithCatalog() {
+    @Transaction
+    suspend fun replaceAllRecipesWithCatalog(catalog: List<Recipe> = catalogRecipes) {
+        clearDataBase()
         withContext(Dispatchers.IO) {
-            // 1. Очищаем базу данных
-            recipeDao.clearAll()
+            // Вставляем все рецепты из каталога
+            recipeDao.insertAll(catalog)
 
-            // 2. Вставляем все рецепты из каталога
-            recipeDao.insertAll(catalogRecipes)
-
-            // 3. Логируем результат
+            // Логируем результат
             Log.d("Database", "Database replaced with ${catalogRecipes.size} recipes")
         }
     }

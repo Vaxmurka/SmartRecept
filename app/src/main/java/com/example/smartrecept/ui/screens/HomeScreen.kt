@@ -102,24 +102,33 @@ fun HomeScreenContent(
     var query by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf<String?>(null) }
 
-    val filteredRecipes = recipes
-        .filter {
-            val matchesQuery = query.isBlank() ||
-                    it.title.contains(query, ignoreCase = true) ||
-                    it.tags.any { tag -> tag.contains(query, ignoreCase = true) }
+    val searchTerms = query
+        .split(" ")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
 
-            val matchesFilter = selectedFilter == null ||
-                    it.tags.any { tag -> tag.equals(selectedFilter, ignoreCase = true) }
-
-            matchesQuery && matchesFilter
+    val filteredRecipes = recipes.filter { recipe ->
+        // Проверка на совпадение хотя бы по одному слову
+        val matchesQuery = searchTerms.isEmpty() || searchTerms.all { term -> // all -> И, any -> ИЛИ
+            recipe.title.contains(term, ignoreCase = true) ||
+                    recipe.tags.any { tag -> tag.contains(term, ignoreCase = true) } ||
+                    recipe.ingredients.any { ingredient -> ingredient.contains(term, ignoreCase = true) } ||
+                    recipe.steps.any { step -> step.contains(term, ignoreCase = true) }
         }
+
+        val matchesFilter = selectedFilter == null ||
+                recipe.tags.any { tag -> tag.equals(selectedFilter, ignoreCase = true) }
+
+        matchesQuery && matchesFilter
+    }
 
     LazyColumn(Modifier.background(color = MaterialTheme.colorScheme.background)) {
         stickyHeader {
             Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
                 CustomSearchPanel(
                     query = query,
-                    onQueryChange = { query = it },
+                    readOnly = true,
+                    onQueryChange = { /*query = it*/ },
                     navController = navController,
                     selectedFilter = selectedFilter,
                     onFilterChange = { selectedFilter = it }

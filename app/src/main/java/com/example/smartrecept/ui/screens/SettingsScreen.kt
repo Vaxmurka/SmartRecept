@@ -3,7 +3,12 @@ package com.example.smartrecept.ui.screens
 
 import RecipeViewModelFactory
 import android.app.Application
+import android.content.Intent
+import android.provider.OpenableColumns
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -12,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.example.smartrecept.data.settings.UserPreferencesRepository
@@ -36,14 +42,21 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.smartrecept.data.recipes.DatasourceRecipes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.toList
+import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun SettingsScreen(
@@ -60,9 +73,72 @@ fun SettingsApp(
     viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)),
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val preferences by repository.preferencesFlow.collectAsState(initial = UserPreferences())
     var showClearFavouriteDialog by remember { mutableStateOf(false) }
     var showClearAllDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
+
+    // Состояние экспорта
+    val exportState by viewModel.exportState.collectAsState()
+
+    // Функция для сохранения файла и запуска шеринга
+    val saveAndShareFile: (String, String, String) -> Unit = { content, fileName, type ->
+        try {
+            // Создаем временный файл в кэше приложения
+            val file = File(context.cacheDir, fileName)
+            FileOutputStream(file).use { fos ->
+                fos.write(content.toByteArray())
+            }
+
+            // Создаем URI через FileProvider для безопасного доступа
+            val fileUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+
+            // Создаем Intent для шеринга/скачивания
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                when (type) {
+                    "JSON" -> setType("application/json")
+                    "CSV" -> setType("text/csv")
+                    else -> setType("text/plain")
+                }
+                putExtra(Intent.EXTRA_STREAM, fileUri)
+                putExtra(Intent.EXTRA_SUBJECT, "Экспорт рецептов")
+                putExtra(Intent.EXTRA_TITLE, fileName)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            // Запускаем диалог выбора приложения для сохранения/шеринга
+            context.startActivity(Intent.createChooser(shareIntent, "Сохранить файл"))
+
+            Toast.makeText(context, "Файл готов к сохранению: $fileName", Toast.LENGTH_LONG).show()
+
+        } catch (e: Exception) {
+            Toast.makeText(context, "Ошибка при экспорте: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Обработка состояний экспорта
+    LaunchedEffect(exportState) {
+        when (val state = exportState) {
+            is RecipeViewModel.ExportState.Ready -> {
+                // Сохраняем файл и запускаем шеринг
+                saveAndShareFile(state.content, state.fileName, state.type)
+                viewModel.resetExportState()
+            }
+            is RecipeViewModel.ExportState.Error -> {
+                // Показываем ошибку
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                viewModel.resetExportState()
+            }
+            else -> {}
+        }
+    }
+
+    val fontType = preferences.font
 
     if (showClearFavouriteDialog) {
         AlertDialog(
@@ -84,6 +160,48 @@ fun SettingsApp(
                     Text("Отмена")
                 }
             }
+        )
+    }
+
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text("Выберите формат экспорта") },
+            text = { Text("В каком формате вы хотите экспортировать данные?") },
+            confirmButton = {
+                Column {
+                    Button(
+                        onClick = {
+                            viewModel.prepareJsonExport()
+                            showExportDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("JSON")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            viewModel.prepareCsvExport()
+                            showExportDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("CSV")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Кнопка Отмена
+                    OutlinedButton(
+                        onClick = { showExportDialog = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Отмена")
+                    }
+                }
+            },
+            dismissButton = null
         )
     }
 
@@ -123,7 +241,7 @@ fun SettingsApp(
         // Выбор темы оформление
         Text("Тема", style = MaterialTheme.typography.titleMedium)
 
-        val selectedTheme = preferences.themeMode // Assume: "light", "dark", "system"
+        val selectedTheme = preferences.themeMode
         val themeOptions = listOf("Light", "Dark", "System")
 
         Row(
@@ -154,10 +272,11 @@ fun SettingsApp(
         // Выбор масштаба / размера шрифта
         var fontSize by remember { mutableStateOf(FontSizeOption.M) }
 
+        Text("Масштаб", style = MaterialTheme.typography.titleMedium)
         FontSizeSelector(
             selectedSize = fontSize,
             onSizeSelected = {
-                scope.launch { repository.updateFontScale(it.size.toFloat()) }
+                scope.launch { repository.updateFont(it) }
                 fontSize = it
             }
         )
@@ -185,23 +304,13 @@ fun SettingsApp(
         // Работа с бд
         DatabaseManagementPanel(
             onDeleteFavorites = {
-                // Логика удаления избранного
                 showClearFavouriteDialog = true
             },
             onDeleteAllRecipes = {
-                // Логика удаления всех рецептов
                 showClearAllDialog = true
             },
             onExportData = {
-                // Логика экспорта данных
-            },
-            onImportJSON = { jsonContent ->
-                // Логика импорта JSON
-                ImportResult(success = true, message = "Данные импортированы", importedCount = 2)
-            },
-            onImportCSV = { csvContent ->
-                // Логика импорта CSV
-                ImportResult(success = true, message = "Данные импортированы", importedCount = 2)
+                showExportDialog = true
             }
         )
     }
@@ -279,8 +388,7 @@ data class DemoRecipe(
 
 data class ImportResult(
     val success: Boolean,
-    val message: String,
-    val importedCount: Int = 0
+    val message: String
 )
 
 @Composable
@@ -288,14 +396,16 @@ fun DatabaseManagementPanel(
     onDeleteFavorites: () -> Unit,
     onDeleteAllRecipes: () -> Unit,
     onExportData: () -> Unit,
-    onImportJSON: (String) -> ImportResult,
-    onImportCSV: (String) -> ImportResult,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)),
 ) {
     var showDemoTemplate by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf<ImportResult?>(null) }
     var importType by remember { mutableStateOf("") }
+
+    var showResultDialog by remember { mutableStateOf(false) }
+    var importResultMessage by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier.padding(vertical = 16.dp)
@@ -362,13 +472,16 @@ fun DatabaseManagementPanel(
             ImportFileDialog(
                 onDismiss = { showImportDialog = false },
                 onImportJSON = { jsonContent ->
-                    val result = onImportJSON(jsonContent)
-                    importResult = result
                     importType = "JSON"
+                    showImportDialog = false
+                    viewModel.importFromJson(jsonContent) { success, message ->
+                        importResult = ImportResult(success, message)
+                    }
                 },
                 onImportCSV = { csvContent ->
-                    val result = onImportCSV(csvContent)
-                    importResult = result
+                    viewModel.importFromCsv(csvContent) { success, message ->
+                        importResult = ImportResult(success, message)
+                    }
                     importType = "CSV"
                 }
             )
@@ -432,7 +545,7 @@ fun DatabaseOperationCard(
 
 data class DatabaseOperation(
     val title: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val icon: ImageVector,
     val color: Color,
     val onClick: () -> Unit
 )
@@ -469,8 +582,48 @@ fun ImportFileDialog(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // Эти состояния для ручного ввода можно оставить
     var jsonContent by remember { mutableStateOf("") }
     var csvContent by remember { mutableStateOf("") }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                // Получаем имя файла из метаданных Uri
+                var fileName: String? = null
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex != -1) {
+                            fileName = cursor.getString(nameIndex)
+                        }
+                    }
+                }
+
+                // Читаем содержимое файла
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val fileContent = stream.bufferedReader().readText()
+
+                    // Теперь проверяем имя файла, которое мы получили
+                    if (fileName?.endsWith(".json", ignoreCase = true) == true) {
+                        onImportJSON(fileContent)
+                    } else if (fileName?.endsWith(".csv", ignoreCase = true) == true) {
+                        onImportCSV(fileContent)
+                    } else {
+                        // Эта ошибка теперь будет показываться только если расширение действительно другое
+                        Toast.makeText(context, "Неподдерживаемый формат файла. Выбран файл: $fileName", Toast.LENGTH_LONG).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+                // Обрабатываем возможные ошибки чтения файла
+                Toast.makeText(context, "Ошибка чтения файла: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -479,7 +632,8 @@ fun ImportFileDialog(
                 .padding(16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally // Центрируем для красоты
             ) {
                 Text(
                     text = "Импорт данных",
@@ -487,60 +641,25 @@ fun ImportFileDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // JSON импорт
+                // Упрощаем UI: оставляем только одну кнопку для выбора файла
                 Text(
-                    text = "JSON данные:",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    text = "Выберите файл .json или .csv для импорта ваших рецептов.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
-                androidx.compose.material3.OutlinedTextField(
-                    value = jsonContent,
-                    onValueChange = { jsonContent = it },
-                    placeholder = { Text("Вставьте JSON данные...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    singleLine = false
-                )
-                Button(
-                    onClick = { onImportJSON(jsonContent) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    enabled = jsonContent.isNotBlank()
-                ) {
-                    Icon(Icons.Default.FileOpen, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Импорт JSON")
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // CSV импорт
-                Text(
-                    text = "CSV данные:",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                androidx.compose.material3.OutlinedTextField(
-                    value = csvContent,
-                    onValueChange = { csvContent = it },
-                    placeholder = { Text("Вставьте CSV данные...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    singleLine = false
-                )
                 Button(
-                    onClick = { onImportCSV(csvContent) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    enabled = csvContent.isNotBlank()
+                    onClick = {
+                        // Запускаем выбор файлов с нужными MIME-типами
+//                        importLauncher.launch(arrayOf("application/json", "text/csv"))
+                        importLauncher.launch(arrayOf("*/*"))
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.FileOpen, null)
+                    Icon(Icons.Default.FileOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Импорт CSV")
+                    Text("Выбрать файл для импорта")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -568,7 +687,7 @@ fun ImportResultDialog(
             Text(if (result.success) "Импорт успешен" else "Ошибка импорта")
         },
         text = {
-            Text("$importType импорт: ${result.message}\nИмпортировано: ${result.importedCount}")
+            Text("$importType импорт: \n${result.message}")
         },
         confirmButton = {
             Button(onClick = onDismiss) {
@@ -584,40 +703,42 @@ fun DemoTemplateDialog(
     onDismiss: () -> Unit
 ) {
     val jsonTemplate = """
-        {
-          "recipes": [
-            {
-              "id": 1,
-              "title": "Паста Карбонара",
-              "tags": ["Итальянская", "быстрое"],
-              "time": 20,
-              "servings": 1,
-              "image": "http://example.com/photo1.jpg",
-              "isFavorite": false,
-              "ingredients": ["спагетти", "яйца", "пармезан", "бекон"],
-              "steps": ["Варить пасту", "Обжарить бекон", "Смешать с соусом"],
-              "notes": []
-            },
-            {
-              "id": 2,
-              "title": "Салат Цезарь",
-              "tags": ["Салаты", "быстрое"],
-              "time": 15,
-              "servings": 2,
-              "image": "http://example.com/photo2.jpg",
-              "isFavorite": false,
-              "ingredients": ["салат", "курица", "сухарики", "соус"],
-              "steps": ["Подготовить ингредиенты", "Смешать", "Заправить"],
-              "notes": []
-            }
-          ]
-        }
+        [
+          {
+            "id": 1,
+            "title": "Паста Карбонара",
+            "tags": ["Итальянская", "быстрое"],
+            "time": "20 мин",
+            "image": "",
+            "servings": 2,
+            "isFavorite": false,
+            "isCooked": false,
+            "ingredients": ["спагетти - 200г", "яйца - 2 шт", "пармезан - 50г", "бекон - 100г"],
+            "steps": ["Варить пасту 10 минут", "Обжарить бекон", "Смешать с соусом"],
+            "notes": [],
+            "stepImages": []
+          },
+          {
+            "id": 2,
+            "title": "Салат Цезарь",
+            "tags": ["Салаты", "быстрое"],
+            "time": "15 мин",
+            "image": "",
+            "servings": 2,
+            "isFavorite": false,
+            "isCooked": false,
+            "ingredients": ["салат айсберг - 1 шт", "курица - 200г", "сухарики - 50г", "соус цезарь - 2 ст.л."],
+            "steps": ["Подготовить ингредиенты", "Нарезать салат и курицу", "Смешать все ингредиенты", "Заправить соусом"],
+            "notes": [],
+            "stepImages": []
+          }
+        ]
     """.trimIndent()
 
     val csvTemplate = """
-        title,tags,time,servings,isFavorite,ingredients,steps
-        "Паста Карбонара","Итальянская;быстрое",20,2,"http://example.com/photo1.jpg",false,"спагетти;яйца;пармезан;бекон","Варить пасту;Обжарить бекон;Смешать с соусом"
-        "Салат Цезарь","Салаты;быстрое",15,1,"http://example.com/photo2.jpg",false,"салат;курица;сухарики;соус","Подготовить ингредиенты;Смешать;Заправить"
+        ID,Title,Tags,Time,Image,Servings,IsFavorite,IsCooked,Ingredients,Steps,Notes,StepImages
+        1,"Паста Карбонара","Итальянская;быстрое","20 мин","",2,false,false,"спагетти - 200г;яйца - 2 шт;пармезан - 50г;бекон - 100г","Варить пасту 10 минут;Обжарить бекон;Смешать с соусом","",""
+        2,"Салат Цезарь","Салаты;быстрое","15 мин","",2,false,false,"салат айсберг - 1 шт;курица - 200г;сухарики - 50г;соус цезарь - 2 ст.л.","Подготовить ингредиенты;Нарезать салат и курицу;Смешать все ингредиенты;Заправить соусом","",""
     """.trimIndent()
 
     Dialog(onDismissRequest = onDismiss) {
@@ -664,7 +785,7 @@ fun DemoTemplateDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp)
-                        .height(75.dp)
+                        .height(150.dp)
                         .horizontalScroll(rememberScrollState()),
                     colors = CardDefaults.cardColors(containerColor = Color.LightGray.copy(alpha = 0.1f))
                 ) {

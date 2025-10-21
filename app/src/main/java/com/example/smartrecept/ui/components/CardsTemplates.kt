@@ -257,7 +257,8 @@ fun RecipeDayCard(recipe: Recipe, navController: NavHostController) {
 @Composable
 fun CustomSearchPanel(
     query: String,
-    onQueryChange: (String) -> Unit,
+    readOnly: Boolean = false,
+    onQueryChange: (String) -> Unit = {},
     navController: NavHostController,
     selectedFilter: String?,
     onFilterChange: (String?) -> Unit,
@@ -285,6 +286,7 @@ fun CustomSearchPanel(
                 onValueChange = onQueryChange,
                 placeholder = { Text("Поиск...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                readOnly = readOnly,
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { onQueryChange("") }) {
@@ -302,6 +304,7 @@ fun CustomSearchPanel(
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxSize()
+                    .clickable { if (readOnly) navController.navigate("search") }
             )
         }
 
