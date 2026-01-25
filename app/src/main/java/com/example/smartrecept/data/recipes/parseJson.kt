@@ -9,7 +9,8 @@ data class AIRecipe(
     val time: String,
     val servings: Int,
     val steps: List<String>,
-    val notes: List<String>
+    val notes: List<String>,
+    val image_url: String? = null // Добавляем поле для URL изображения
 )
 
 class AIJsonParser {
@@ -17,31 +18,85 @@ class AIJsonParser {
     companion object {
 
         /**
-         * Парсит JSON строку в объект AIRecipe
+         * Извлекает чистый JSON из текста (убирает лишний текст до/после JSON)
+         */
+        fun extractJson(text: String): String {
+            return try {
+                val trimmed = text.trim()
+                val jsonStart = trimmed.indexOf('{')
+                val jsonEnd = trimmed.lastIndexOf('}') + 1
+
+                if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                    trimmed.substring(jsonStart, jsonEnd)
+                } else {
+                    trimmed
+                }
+            } catch (e: Exception) {
+                text
+            }
+        }
+
+        /**
+         * Парсит JSON строку в объект AIRecipe с безопасным извлечением
          */
         fun parseAIRecipe(jsonString: String): AIRecipe {
             println("Parsing JSON...")
-            println("JSON: $jsonString")
-            println("Parsing JSON...")
-            val json = JSONObject(jsonString)
 
-            return AIRecipe(
-                airecipe_name = json.getString("airecipe_name"),
-                time = json.getString("time"),
-                servings = json.getInt("servings"),
-                ingredients = parseStringArray(json.getJSONArray("ingredients")),
-                tags = parseStringArray(json.getJSONArray("tags")),
-                steps = parseStringArray(json.getJSONArray("steps")),
-                notes = parseStringArray(json.getJSONArray("notes"))
-            )
+            // Очищаем JSON от лишнего текста
+            val cleanJson = extractJson(jsonString)
+            println("Cleaned JSON: $cleanJson")
+
+            return try {
+                val json = JSONObject(cleanJson)
+
+                AIRecipe(
+                    airecipe_name = json.getString("airecipe_name"),
+                    time = json.getString("time"),
+                    servings = json.getInt("servings"),
+                    ingredients = parseStringArray(json.getJSONArray("ingredients")),
+                    tags = parseStringArray(json.getJSONArray("tags")),
+                    steps = parseStringArray(json.getJSONArray("steps")),
+                    notes = parseStringArray(json.getJSONArray("notes")),
+                    image_url = json.optString("image_url", null) // Получаем URL изображения
+                )
+            } catch (e: Exception) {
+                println("Error parsing JSON: ${e.message}")
+                // Возвращаем дефолтный рецепт при ошибке
+                AIRecipe(
+                    airecipe_name = "Ошибка загрузки",
+                    time = "0",
+                    servings = 1,
+                    ingredients = emptyList(),
+                    tags = emptyList(),
+                    steps = emptyList(),
+                    notes = listOf("Не удалось разобрать ответ AI")
+                )
+            }
         }
 
         /**
          * Преобразует JSONArray в List<String>
          */
         private fun parseStringArray(jsonArray: JSONArray): List<String> {
-            return List(jsonArray.length()) { index ->
-                jsonArray.getString(index)
+            return if (jsonArray.length() > 0) {
+                List(jsonArray.length()) { index ->
+                    jsonArray.getString(index)
+                }
+            } else {
+                emptyList()
+            }
+        }
+
+        /**
+         * Проверяет, является ли строка валидным JSON
+         */
+        fun isValidJson(text: String): Boolean {
+            return try {
+                val cleanJson = extractJson(text)
+                JSONObject(cleanJson)
+                true
+            } catch (e: Exception) {
+                false
             }
         }
 

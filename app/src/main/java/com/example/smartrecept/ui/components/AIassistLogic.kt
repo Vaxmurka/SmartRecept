@@ -5,6 +5,7 @@ import RecipeViewModelFactory
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,22 +18,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PeopleAlt
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -66,26 +71,37 @@ fun AIassistLogic(
     navController: NavController,
     viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application))
 ) {
-    val prompt_preparing_visual = "Ввыведи инофрмацию в формате JSON !!!ТОЛЬКО JSON!!! по следующему алгоритму:\n\n" +
-            "в блоке 'ingredients' перечисли ингредиенты в виде массива (списка) [ingr1, ing2, ingr3]\n\n" +
-            " блоке 'tags' перечисли теги в виде массива (списка) [tag1, tag2, tag3] которые будут описывать рецепт в одно слово\n\n" +
-            "в блоке 'time' укажи примерное время приготовления в минутах (тип String)\n\n" +
-            "в блоке 'servings' укажи количество порций (тип Int)\n\n" +
-            "в блоке 'steps' напиши шаги приготовления рецепта подробно\n\n" +
-            "если требуется, то дабавь в блоке 'notes' заметки или подсказки\n\n"
+    val prompt_preparing_visual = """
+        ВЫВЕДИ ИНФОРМАЦИЮ В ФОРМАТЕ JSON !!!ТОЛЬКО JSON!!! ПО СЛЕДУЮЩЕМУ АЛГОРИТМУ:
+        
+        1. В блоке 'airecipe_name' укажи название рецепта (тип String)
+        2. В блоке 'ingredients' перечисли ингредиенты в виде массива (списка) [ингредиент1, ингредиент2]
+        3. В блоке 'tags' перечисли теги в виде массива (списка) [тег1, тег2, тег3]
+        4. В блоке 'time' укажи примерное время приготовления в минутах (тип String)
+        5. В блоке 'servings' укажи количество порций (тип Int)
+        6. В блоке 'steps' напиши шаги приготовления рецепта подробно
+        7. В блоке 'notes' если требуется, добавь заметки или подсказки
+        8. В блоке 'image_url' добавь РЕАЛЬНУЮ ССЫЛКУ на фотографию готового блюда из интернета в формате JPG/PNG.
+           Фото должно быть аппетитным, хорошо освещенным, высокого качества.
+           Пример правильной ссылки: https://gipfel.ru/upload/iblock/6a3/0h4yv2q51p0y6md8a1w4c5zjfsuc3dod.jpg
+           
+        ВАЖНО: Фото должно максимально точно соответствовать рецепту!
+    """.trimIndent()
 
     var prompt by remember { mutableStateOf("Напиши рецепт омлета") }
     var response by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    var selectedModel by remember { mutableStateOf(AiModel.GROQ) }
+    var selectedModel by remember { mutableStateOf(AiModel.GEMINI) }
 
+    var parsedRecipe by remember { mutableStateOf<AIRecipe?>(null) }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-//            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         // Кнопка назад
@@ -102,7 +118,9 @@ fun AIassistLogic(
             value = prompt,
             onValueChange = { prompt = it },
             label = { Text("Вопрос для Gemini") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = false,
+            maxLines = 3
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -110,21 +128,27 @@ fun AIassistLogic(
         Button(
             onClick = {
                 isLoading = true
+                response = "" // Очищаем предыдущий ответ
+                parsedRecipe = null // Сбрасываем спарсенный рецепт
                 scope.launch {
                     try {
-                        response = "Спрашиваю..."
                         val result = askAI(prompt + prompt_preparing_visual, selectedModel)
                         response = result
-//                        println(result)
+                        println("✅ Получен ответ: ${if (result.length > 50) result.substring(0, 50) + "..." else result}")
 
+                        // Парсим рецепт после получения ответа
+                        if (isValidJsonResponse(result)) {
+                            parsedRecipe = AIJsonParser.parseAIRecipe(result)
+                        }
                     } catch (e: Exception) {
                         response = "ОШИБКА: ${e.message}"
+                        println("❌ Ошибка: ${e.message}")
                     } finally {
                         isLoading = false
                     }
                 }
             },
-            enabled = !isLoading,
+            enabled = !isLoading && prompt.isNotEmpty(),
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             if (isLoading) {
@@ -150,16 +174,6 @@ fun AIassistLogic(
                 label = { Text("Gemini") }
             )
             FilterChip(
-                selected = selectedModel == AiModel.DEEPSEEK,
-                onClick = { selectedModel = AiModel.DEEPSEEK },
-                label = { Text("DeepSeek") }
-            )
-            FilterChip(
-                selected = selectedModel == AiModel.GROQ,
-                onClick = { selectedModel = AiModel.GROQ },
-                label = { Text("Groq") }
-            )
-            FilterChip(
                 selected = selectedModel == AiModel.TESTER,
                 onClick = { selectedModel = AiModel.TESTER },
                 label = { Text("Tester") }
@@ -168,9 +182,266 @@ fun AIassistLogic(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Показываем результат или загрузку
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("ИИ генерирует рецепт...")
+                    }
+                }
+            }
 
-        PreviewRecipe(response)
+            response.isNotEmpty() -> {
+                // Проверяем, валидный ли JSON получен
+                if (isValidJsonResponse(response)) {
+                    Column {
+                        // Кнопка сохранения (только если рецепт спарсен)
+                        if (parsedRecipe != null) {
+                            Button(
+                                onClick = { showSaveDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary
+                                )
+                            ) {
+                                Icon(Icons.Default.Save, contentDescription = "Save")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("💾 Сохранить рецепт в БД")
+                            }
+                        }
+
+                        // Превью
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
+                            PreviewRecipe(response)
+                        }
+                    }
+                } else {
+                    // Показываем текст ответа, если это не JSON
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                "Ответ не в формате JSON",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = response,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+
+            else -> {
+                // Начальный экран с инструкцией
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 32.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Default.Chat,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "AI Кулинарный Ассистент",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Напишите запрос для генерации рецепта, например:\n" +
+                                    "• Напиши рецепт омлета\n" +
+                                    "• Как приготовить пасту карбонара\n" +
+                                    "• Рецепт борща с говядиной\n" +
+                                    "• Вегетарианский салат с авокадо",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Диалог сохранения
+    if (showSaveDialog && parsedRecipe != null) {
+        SaveRecipeDialog(
+            aiRecipe = parsedRecipe!!,
+            onSave = { recipeTitle ->
+                scope.launch {
+                    try {
+                        // Используем метод ViewModel для сохранения
+                        val result = saveAIRecipeToDatabase(
+                            aiRecipe = parsedRecipe!!.copy(airecipe_name = recipeTitle),
+                            viewModel = viewModel
+                        )
+
+                        if (result.isSuccess) {
+                            Toast.makeText(
+                                context,
+                                "Рецепт '$recipeTitle' сохранен!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            // Закрываем диалог
+                            showSaveDialog = false
+
+                            // Можно вернуться назад или очистить форму
+                            // navController.popBackStack()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Ошибка сохранения: ${result.exceptionOrNull()?.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context,
+                            "Ошибка: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            },
+            onCancel = { showSaveDialog = false }
+        )
+    }
+}
+
+@Composable
+fun SaveRecipeDialog(
+    aiRecipe: AIRecipe,
+    onSave: (String) -> Unit,
+    onCancel: () -> Unit
+) {
+    var recipeTitle by remember { mutableStateOf(aiRecipe.airecipe_name) }
+    var titleError by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("Сохранение рецепта") },
+        text = {
+            Column {
+                Text("Рецепт будет сохранен в вашу базу данных.")
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = recipeTitle,
+                    onValueChange = {
+                        recipeTitle = it
+                        titleError = false
+                    },
+                    label = { Text("Название рецепта") },
+                    isError = titleError,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                if (titleError) {
+                    Text(
+                        "Введите название рецепта",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                // Информация о рецепте
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Информация о рецепте:", fontWeight = FontWeight.Bold)
+                Text("• ${aiRecipe.ingredients.size} ингредиентов")
+                Text("• ${aiRecipe.steps.size} шагов приготовления")
+                Text("• Время: ${aiRecipe.time} минут")
+                Text("• Порций: ${aiRecipe.servings}")
+                if (aiRecipe.tags.isNotEmpty()) {
+                    Text("• Теги: ${aiRecipe.tags.joinToString(", ")}")
+                }
+                if (!aiRecipe.image_url.isNullOrBlank()) {
+                    Text("• 📸 Изображение: будет добавлено", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (recipeTitle.isBlank()) {
+                        titleError = true
+                    } else {
+                        onSave(recipeTitle)
+                    }
+                }
+            ) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) {
+                Text("Отмена")
+            }
+        }
+    )
+}
+
+// Упрощенная функция сохранения AI рецепта
+suspend fun saveAIRecipeToDatabase(
+    aiRecipe: AIRecipe,
+    viewModel: RecipeViewModel
+): Result<Unit> {
+    return try {
+        viewModel.saveAIRecipe(
+            title = aiRecipe.airecipe_name,
+            tags = aiRecipe.tags,
+            time = aiRecipe.time,
+            servings = aiRecipe.servings,
+            ingredients = aiRecipe.ingredients.filter { it.isNotBlank() },
+            steps = aiRecipe.steps.filter { it.isNotBlank() },
+            notes = aiRecipe.notes.filter { it.isNotBlank() },
+            image = aiRecipe.image_url, // Передаем URL изображения
+            onSuccess = { /* Успех уже обрабатывается в AIassistLogic */ },
+            onError = { error -> throw Exception(error) }
+        )
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 }
 
@@ -178,19 +449,13 @@ fun AIassistLogic(
 @Composable
 fun PreviewRecipe(jsonRecipe: String) {
     println("=== ПРЕВЬЮ РЕЦЕПТА ===")
-    println(jsonRecipe)
-    println("======================")
+    println("Исходный текст: ${if (jsonRecipe.length > 100) jsonRecipe.substring(0, 100) + "..." else jsonRecipe}")
 
-    // Используем safe парсинг на случай ошибок
+    // Используем safe парсинг
     val recipe = remember {
         try {
-            val parsed = AIJsonParser.parseAIRecipe(jsonRecipe)
-            println("✅ Успешно распарсено: ${parsed.airecipe_name}")
-            println("Ингредиентов: ${parsed.ingredients.size}")
-            println("Шагов: ${parsed.steps.size}")
-            parsed
+            AIJsonParser.parseAIRecipe(jsonRecipe)
         } catch (e: Exception) {
-            // Если ошибка парсинга, создаем пустой рецепт
             AIRecipe(
                 airecipe_name = "Ошибка загрузки",
                 ingredients = emptyList(),
@@ -198,292 +463,247 @@ fun PreviewRecipe(jsonRecipe: String) {
                 time = "0",
                 servings = 1,
                 steps = emptyList(),
-                notes = emptyList()
+                notes = emptyList(),
+                image_url = null
             )
         }
     }
 
+    println("✅ Распарсено: ${recipe.airecipe_name}")
+    println("📸 URL изображения: ${recipe.image_url ?: "Нет изображения"}")
+    println("======================")
+
     var servingCoefficient by remember { mutableFloatStateOf(1f) }
     var selectedServings by remember { mutableIntStateOf(recipe.servings) }
 
-    LazyColumn(
+    // Используем Column вместо LazyColumn для избежания ошибок с высотой
+    Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .background(MaterialTheme.colorScheme.background),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 20.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Шапка с названием и информацией
-        item {
+        // 0. Изображение рецепта (если есть)
+        if (!recipe.image_url.isNullOrBlank()) {
             CustomCard(
-                boxPadding = PaddingValues(bottom = 16.dp),
-                outPadding = PaddingValues(bottom = 4.dp),
-                shape = RoundedCornerShape(bottomEnd = 28.dp, bottomStart = 28.dp)
+                modifier = Modifier.fillMaxWidth(),
+                boxPadding = PaddingValues(0.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                AsyncImage(
+                    model = recipe.image_url,
+                    contentDescription = "Изображение рецепта",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    placeholder = ColorPainter(Color.LightGray),
+                    error = ColorPainter(Color.LightGray)
+                )
+            }
+        }
 
-                    // Название рецепта
-                    Text(
-                        text = recipe.airecipe_name,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+        // 1. Шапка с названием и информацией
+        CustomCard(
+            boxPadding = PaddingValues(bottom = 16.dp),
+            outPadding = PaddingValues(bottom = 4.dp),
+            shape = RoundedCornerShape(bottomEnd = 28.dp, bottomStart = 28.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Название рецепта
+                Text(
+                    text = recipe.airecipe_name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Мета-информация
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    // Время приготовления
+                    AssistChip(
+                        onClick = {},
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Timelapse,
+                                    contentDescription = "Время",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "${recipe.time} мин",
+                                    color = MaterialTheme.colorScheme.onSecondary
+                                )
+                            }
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        ),
+                        border = BorderStroke(
+                            color = Color.Transparent,
+                            width = 1.dp,
+                        )
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Количество порций с выбором
+                    var expanded by remember { mutableStateOf(false) }
 
-                    // Мета-информация
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        // Время приготовления
+                    Box {
                         AssistChip(
-                            onClick = {},
+                            onClick = { expanded = true },
                             label = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        Icons.Default.Timelapse,
-                                        contentDescription = "Время",
+                                        Icons.Default.PeopleAlt,
+                                        contentDescription = "Порции",
                                         modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondary
+                                        tint = MaterialTheme.colorScheme.onTertiary
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
-                                        "${recipe.time} мин",
-                                        color = MaterialTheme.colorScheme.onSecondary
+                                        "$selectedServings ${getPortionText(selectedServings)}",
+                                        color = MaterialTheme.colorScheme.onTertiary
                                     )
                                 }
                             },
                             colors = AssistChipDefaults.assistChipColors(
-                                containerColor = MaterialTheme.colorScheme.secondary
+                                containerColor = MaterialTheme.colorScheme.tertiary
                             ),
                             border = BorderStroke(
                                 color = Color.Transparent,
                                 width = 1.dp,
-                            )
+                            ),
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = "Выбрать порции",
+                                    tint = MaterialTheme.colorScheme.onTertiary
+                                )
+                            }
                         )
 
-                        // Количество порций с выбором
-                        val expanded = remember { mutableStateOf(false) }
-
-                        Box {
-                            AssistChip(
-                                onClick = { expanded.value = true },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.PeopleAlt,
-                                            contentDescription = "Порции",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.onTertiary
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            "$selectedServings ${getPortionText(selectedServings)}",
-                                            color = MaterialTheme.colorScheme.onTertiary
-                                        )
-                                    }
-                                },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiary
-                                ),
-                                border = BorderStroke(
-                                    color = Color.Transparent,
-                                    width = 1.dp,
-                                ),
-                                trailingIcon = {
-                                    Icon(
-                                        Icons.Default.ArrowDropDown,
-                                        contentDescription = "Выбрать порции",
-                                        tint = MaterialTheme.colorScheme.onTertiary
-                                    )
-                                }
-                            )
-
-                            // Выпадающее меню
-                            DropdownMenu(
-                                expanded = expanded.value,
-                                onDismissRequest = { expanded.value = false },
-                                modifier = Modifier.width(140.dp)
-                            ) {
-                                // Варианты порций
-                                val portionOptions = getPortionOptions(selectedServings)
-
-                                portionOptions.forEach { option ->
-                                    DropdownMenuItem(
-                                        onClick = {
-                                            servingCoefficient = option.toFloat() / recipe.servings.toFloat()
-                                            selectedServings = option
-                                            expanded.value = false
-                                        },
-                                        text = {
-                                            Text("$option ${getPortionText(option)}")
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Теги рецепта
-                    if (recipe.tags.isNotEmpty()) {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                        // Выпадающее меню
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.width(140.dp)
                         ) {
-                            recipe.tags.forEach { tag ->
-                                FilterChip(
-                                    selected = false,
-                                    onClick = {},
-                                    label = { Text("#$tag") },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                    )
+                            // Варианты порций
+                            val portionOptions = getPortionOptions(selectedServings)
+
+                            portionOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    onClick = {
+                                        servingCoefficient = option.toFloat() / recipe.servings.toFloat()
+                                        selectedServings = option
+                                        expanded = false
+                                    },
+                                    text = {
+                                        Text("$option ${getPortionText(option)}")
+                                    }
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            }
-        }
 
-        // 2. Заметки (если есть) - ИСПРАВЛЕННЫЙ ВАРИАНТ
-        if (recipe.notes.isNotEmpty()) {
-            item {
-                CustomCard(
-                    boxPadding = PaddingValues(horizontal = 25.dp, vertical = 20.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Теги рецепта
+                if (recipe.tags.isNotEmpty()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        // Заголовок
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 12.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                        recipe.tags.forEach { tag ->
+                            FilterChip(
+                                selected = false,
+                                onClick = {},
+                                label = { Text("#$tag") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Заметки",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        // Список заметок
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            recipe.notes.forEachIndexed { index, note ->
-                                Row(
-                                    verticalAlignment = Alignment.Top,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(
-                                        Icons.Default.CheckCircleOutline,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = note,
-                                        modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                }
-
-                                if (index < recipe.notes.size - 1) {
-                                    Divider(
-                                        modifier = Modifier.padding(vertical = 4.dp),
-                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                                    )
-                                }
-                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
 
-        // 3. Ингредиенты
-        item {
+        // 2. Заметки (если есть)
+        if (recipe.notes.isNotEmpty()) {
             CustomCard(
-                modifier = Modifier.fillMaxWidth(),
-                boxPadding = PaddingValues(vertical = 20.dp, horizontal = 25.dp)
+                boxPadding = PaddingValues(horizontal = 25.dp, vertical = 20.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    // Заголовок
                     Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
                     ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Ингредиенты",
+                            "Заметки",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
-                        if (servingCoefficient != 1f) {
-                            Text(
-                                "${String.format("%.1f", servingCoefficient)}x",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
+                    // Список заметок
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        recipe.ingredients.forEachIndexed { index, ingredient ->
+                        recipe.notes.forEachIndexed { index, note ->
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalAlignment = Alignment.Top,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(
                                     Icons.Default.CheckCircleOutline,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = if (servingCoefficient != 1f) {
-                                        scaleIngredient(ingredient, servingCoefficient)
-                                    } else {
-                                        ingredient
-                                    },
-                                    modifier = Modifier.weight(1f)
+                                    text = note,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
                             }
-                            if (index < recipe.ingredients.size - 1) {
+
+                            if (index < recipe.notes.size - 1) {
                                 Divider(
-                                    modifier = Modifier.padding(start = 32.dp),
+                                    modifier = Modifier.padding(vertical = 4.dp),
                                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                                 )
                             }
@@ -493,8 +713,73 @@ fun PreviewRecipe(jsonRecipe: String) {
             }
         }
 
-        // 4. Шаги приготовления - ИСПРАВЛЕННЫЙ ВАРИАНТ
-        itemsIndexed(recipe.steps) { index, step ->
+        // 3. Ингредиенты
+        CustomCard(
+            modifier = Modifier.fillMaxWidth(),
+            boxPadding = PaddingValues(vertical = 20.dp, horizontal = 25.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Ингредиенты",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (servingCoefficient != 1f) {
+                        Text(
+                            "${String.format("%.1f", servingCoefficient)}x",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    recipe.ingredients.forEachIndexed { index, ingredient ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircleOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = if (servingCoefficient != 1f) {
+                                    scaleIngredient(ingredient, servingCoefficient)
+                                } else {
+                                    ingredient
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (index < recipe.ingredients.size - 1) {
+                            Divider(
+                                modifier = Modifier.padding(start = 32.dp),
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Шаги приготовления
+        recipe.steps.forEachIndexed { index, step ->
             CustomCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -534,21 +819,46 @@ fun PreviewRecipe(jsonRecipe: String) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Текст шага - БЕЗ ограничений по высоте
+                    // Текст шага
                     Text(
                         text = step,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    println(step)
                 }
             }
         }
 
         // 5. Пустое пространство внизу
-        item {
-            Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(40.dp))
+    }
+}
+
+// Функция проверки валидности JSON ответа
+fun isValidJsonResponse(response: String): Boolean {
+    return try {
+        // Убираем возможный лишний текст до и после JSON
+        val cleanResponse = response.trim()
+
+        // Проверяем, начинается ли ответ с { и заканчивается }
+        if (!cleanResponse.startsWith("{") || !cleanResponse.endsWith("}")) {
+            return false
         }
+
+        // Пробуем парсить JSON
+        val jsonStart = cleanResponse.indexOf('{')
+        val jsonEnd = cleanResponse.lastIndexOf('}') + 1
+        val jsonString = if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            cleanResponse.substring(jsonStart, jsonEnd)
+        } else {
+            cleanResponse
+        }
+
+        JSONObject(jsonString)
+        true
+    } catch (e: Exception) {
+        println("❌ Невалидный JSON: ${e.message}")
+        false
     }
 }
 
@@ -562,48 +872,13 @@ fun getPortionText(count: Int): String {
     }
 }
 
-// Если нужно, добавьте эту функцию в тот же файл или там где есть scaleIngredient
-fun scaleIngredient(ingredient: String, coefficient: Float): String {
-    // Простая логика масштабирования
-    // Можно улучшить для парсинга чисел в ингредиентах
-    return try {
-        // Пытаемся найти числа в строке
-        val regex = """(\d+(?:[.,]\d+)?)""".toRegex()
-        var result = ingredient
-        regex.findAll(ingredient).forEach { match ->
-            val number = match.value.replace(",", ".").toFloat()
-            val scaled = number * coefficient
-            val formatted = if (scaled % 1 == 0f) {
-                scaled.toInt().toString()
-            } else {
-                String.format("%.1f", scaled).replace(".0", "")
-            }
-            result = result.replace(match.value, formatted)
-        }
-        result
-    } catch (e: Exception) {
-        ingredient
-    }
-}
-
-// Функция для получения вариантов порций (если нет в вашем коде)
-fun getPortionOptions(current: Int): List<Int> {
-    return when {
-        current <= 2 -> listOf(1, 2, 3, 4)
-        current <= 4 -> listOf(1, 2, 4, 6)
-        else -> listOf(1, 2, 4, 6, 8)
-    }
-}
-
 enum class AiModel {
-    GEMINI, DEEPSEEK, GROQ, TESTER
+    GEMINI, TESTER
 }
 
 suspend fun askAI(prompt: String, model: AiModel = AiModel.GEMINI): String {
     return when (model) {
         AiModel.GEMINI -> askGemini(prompt)
-        AiModel.DEEPSEEK -> askTester(prompt)
-        AiModel.GROQ -> askTester(prompt)
         AiModel.TESTER -> askTester(prompt)
     }
 }
@@ -614,287 +889,180 @@ suspend fun askGemini(prompt: String): String {
         val model = Firebase.ai(backend = GenerativeBackend.googleAI())
             .generativeModel("gemini-2.5-flash")
 
-        val result = model.generateContent(prompt)
-        result.text ?: "Gemini не ответил"
+        val strictPrompt = """
+            ТВОЯ ЗАДАЧА: ВЕРНУТЬ ТОЛЬКО JSON БЕЗ ЛЮБЫХ ДРУГИХ СЛОВ, ОБЪЯСНЕНИЙ ИЛИ MARKDOWN.
+            
+            $prompt
+            
+            СТРОГОЕ ТРЕБОВАНИЕ:
+            1. Начни ответ сразу с фигурной скобки "{"
+            2. Закончи ответ фигурной скобкой "}"
+            3. Не добавляй никаких комментариев, примечаний, объяснений
+            4. Не используй markdown (```json, ```)
+            5. Ответ должен быть В ТОЧНОСТИ в этом формате:
+            
+            {
+                "airecipe_name": "Название рецепта здесь",
+                "ingredients": ["ингредиент 1", "ингредиент 2", "ингредиент 3"],
+                "tags": ["тег1", "тег2", "тег3"],
+                "time": "30",
+                "servings": 2,
+                "steps": ["Шаг 1: сделай это", "Шаг 2: потом это"],
+                "notes": ["Заметка 1", "Заметка 2"],
+                "image_url": "https://real-website.com/real-photo-of-dish.jpg"
+            }
+            
+            ОБРАТИ ВНИМАНИЕ на image_url:
+            - Это должна быть РЕАЛЬНАЯ рабочая ссылка на фото
+            - Фото должно быть в формате JPG или PNG
+            - Ссылка должна начинаться с https://
+            - Фото должно соответствовать рецепту
+            
+            Пример правильного ответа:
+            {
+                "airecipe_name": "Классический омлет",
+                "ingredients": ["3 яйца", "100 мл молока", "соль", "перец", "1 ст.л. растительного масла"],
+                "tags": ["завтрак", "быстро", "просто"],
+                "time": "10",
+                "servings": 2,
+                "steps": ["Взбейте яйца с молоком", "Добавьте соль и перец", "Жарьте на сковороде 5-7 минут"],
+                "notes": ["Подавайте горячим", "Можно добавить зелень"],
+                "image_url": "https://img.povar.ru/uploads/0f/d2/e3/3a/omlet_klassicheskii-868901.JPG"
+            }
+        """.trimIndent()
+
+        println("📤 Отправляю запрос Gemini с запросом на изображение...")
+        val result = model.generateContent(strictPrompt)
+
+        val responseText = result.text?.trim() ?: "{}"
+        println("📥 Получен ответ с изображением: ${responseText.take(300)}...")
+
+        // Очищаем ответ от возможного markdown
+        val cleaned = cleanGeminiResponse(responseText)
+        println("🧹 Очищенный ответ: ${cleaned.take(300)}...")
+
+        cleaned
 
     } catch (e: Exception) {
-        "ОШИБКА: ${e.message}\n\n"
+        println("❌ Ошибка Gemini: ${e.message}")
+        // Возвращаем JSON без изображения при ошибке
+        """{
+            "airecipe_name": "Ошибка загрузки",
+            "ingredients": [],
+            "tags": [],
+            "time": "0",
+            "servings": 1,
+            "steps": [],
+            "notes": ["Ошибка: ${e.message?.take(50) ?: "Неизвестная ошибка"}"],
+            "image_url": null
+        }"""
     }
 }
 
 suspend fun askTester(prompt: String): String {
     return """
     {
-      "airecipe_name": "Тестовый рецепт: 1",
-      "ingredients": ["3 яйца", "100 мл молока", "соль", "перец", "масло"],
-      "tags": ["тест", "быстро", "просто"],
+      "airecipe_name": "Классический омлет с сыром",
+      "ingredients": ["3 яйца", "100 мл молока", "соль", "перец", "50 г сыра", "1 ст.л. масла"],
+      "tags": ["завтрак", "быстро", "яйца"],
       "time": "15",
       "servings": 2,
       "steps": [
-        "Подготовьте все ингредиенты",
-        "Смешайте яйца с молоком",
-        "Добавьте соль и перец",
-        "Готовьте на среднем огне 10 минут"
+        "Взбейте яйца с молоком до однородности",
+        "Добавьте соль, перец и натертый сыр",
+        "Разогрейте сковороду с маслом",
+        "Вылейте смесь и жарьте на среднем огне 5-7 минут",
+        "Подавайте горячим с зеленью"
       ],
-      "notes": ["Тестовый рецепт для разработки", "Замените на реальный API"]
+      "notes": ["Для пышности можно добавить щепотку соды", "Сыр можно заменить на любой другой"],
+      "image_url": "https://images.unsplash.com/photo-1551024709-8f23befc6f87"
     }
     """.trimIndent()
 }
-//
-//suspend fun askGroq(prompt: String): String {
-//    return withContext(Dispatchers.IO) {
-//        try {
-//            val apiKey = ""
-//
-//            // Если ключ пустой или не начинается с gsk_
-//            if (apiKey.isEmpty() || apiKey == "\"\"" || !apiKey.startsWith("gsk_")) {
-//                return@withContext "❌ ОШИБКА: Неверный формат ключа Groq.\n" +
-//                        "Ожидается: 'gsk_********'\n" +
-//                        "Получено: '${apiKey.take(20)}'\n\n" +
-//                        "Проверьте local.properties и синхронизацию Gradle."
-//            }
-//
-//            // Настраиваем клиент
-//            val client = OkHttpClient.Builder()
-//                .connectTimeout(30, TimeUnit.SECONDS)
-//                .readTimeout(60, TimeUnit.SECONDS)
-//                .addInterceptor { chain ->
-//                    val request = chain.request().newBuilder()
-//                        .addHeader("User-Agent", "SmartRecept/1.0")
-//                        .build()
-//                    chain.proceed(request)
-//                }
-//                .build()
-//
-//            // Доступные модели Groq (бесплатные):
-//            // - "llama3-8b-8192"           // Быстрая, хорошая
-//            // - "llama3.1-8b-instant"      // Очень быстрая
-//            // - "mixtral-8x7b-32768"       // Качественная, но медленнее
-//            // - "gemma2-9b-it"             // Google модель
-//            // - "qwen-2.5-32b"             // Алибаба модель
-//
-//            val model = "openai/gpt-oss-120b" // Рекомендую эту для начала
-//
-//            // Формируем запрос
-//            val jsonBody = JSONObject().apply {
-//                put("model", model)
-//                put("messages", JSONArray().apply {
-//                    put(JSONObject().apply {
-//                        put("role", "user")
-//                        put("content", prompt)
-//                    })
-//                })
-//                put("temperature", 0.7)
-//                put("max_tokens", 4000)
-////                put("top_p", 0.9)
-////                put("stream", false)
-//            }
-//
-//            println("Отправляю запрос к Groq (модель: $model)...")
-//
-//            val request = Request.Builder()
-//                .url("https://api.groq.com/openai/v1/chat/completions")
-//                .addHeader("Authorization", "Bearer $apiKey")
-//                .addHeader("Content-Type", "application/json")
-//                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-//                .build()
-//
-//            val response = client.newCall(request).execute()
-//            val responseBody = response.body?.string()
-//
-//            println("Ответ от Groq: код ${response.code}")
-//
-//            // Обрабатываем ответ
-//            when {
-//                !response.isSuccessful -> {
-//                    val errorMsg = when (response.code) {
-//                        401 -> "❌ Неверный API ключ Groq"
-//                        429 -> "❌ Превышен лимит запросов (30/мин). Попробуйте через минуту."
-//                        402 -> "❌ Требуется оплата для Groq" // На всякий случай
-//                        else -> "❌ Ошибка ${response.code}: ${response.message}"
-//                    }
-//                    "$errorMsg\n${responseBody?.take(200) ?: ""}"
-//                }
-//
-//                responseBody == null -> {
-//                    "❌ Пустой ответ от Groq"
-//                }
-//
-//                else -> {
-//                    try {
-//                        val json = JSONObject(responseBody)
-//
-//                        // Проверяем структуру ответа
-//                        if (!json.has("choices") || json.getJSONArray("choices").length() == 0) {
-//                            // Иногда Groq возвращает другой формат
-//                            if (json.has("generated_text")) {
-//                                return@withContext json.getString("generated_text")
-//                            }
-//                            return@withContext "❌ Неверный формат ответа от Groq"
-//                        }
-//
-//                        val choices = json.getJSONArray("choices")
-//                        val firstChoice = choices.getJSONObject(0)
-//
-//                        // OpenAI-совместимый формат
-//                        if (firstChoice.has("message")) {
-//                            val message = firstChoice.getJSONObject("message")
-//                            val content = message.getString("content")
-//
-//                            // Очищаем ответ
-//                            val cleaned = content
-//                                .replace("```json", "")
-//                                .replace("```", "")
-//                                .trim()
-//
-//                            println("Успешный ответ от Groq (${cleaned.length} символов)")
-//
-//                            // Добавляем информацию об использовании токенов
-//                            if (json.has("usage")) {
-//                                val usage = json.getJSONObject("usage")
-//                                val totalTokens = usage.getInt("total_tokens")
-//                                println("Использовано токенов: $totalTokens")
-//                            }
-//
-//                            return@withContext cleaned
-//                        } else {
-//                            // Альтернативный формат
-//                            return@withContext firstChoice.getString("text")
-//                        }
-//
-//                    } catch (e: Exception) {
-//                        println("Ошибка парсинга JSON: ${e.message}")
-//                        "❌ Ошибка парсинга ответа Groq: ${e.message}\n\nОтвет: ${responseBody?.take(500)}"
-//                    }
-//                }
-//            }
-//
-//        } catch (e: java.net.SocketTimeoutException) {
-//            "❌ Таймаут подключения к Groq. Модель может быть перегружена."
-//        } catch (e: java.net.UnknownHostException) {
-//            "❌ Не удается подключиться к Groq. Проверьте интернет."
-//        } catch (e: Exception) {
-//            "❌ Ошибка Groq: ${e.message ?: "Неизвестная ошибка"}"
-//        }
-//    }
-//}
-//
-//suspend fun askDeepSeek(prompt: String): String {
-//    return withContext(Dispatchers.IO) {
-//        try {
-//            // 1. Получаем API ключ из BuildConfig
-//            val apiKey = BuildConfig.DEEPSEEK_API_KEY
-//
-//            if (apiKey.isEmpty() || apiKey == "\"\"" || apiKey.contains("ваш")) {
-//                return@withContext "❌ ОШИБКА: API ключ DeepSeek не настроен.\n" +
-//                        "Добавьте ключ в local.properties: deepseek.api.key=ваш_ключ\n" +
-//                        "И синхронизируйте Gradle (File → Sync Project with Gradle Files)"
-//            }
-//
-//            println("Используем DeepSeek API ключ: ${apiKey.take(10)}...")
-//
-//            // 2. Настраиваем HTTP клиент
-//            val client = OkHttpClient.Builder()
-//                .connectTimeout(30, TimeUnit.SECONDS)
-//                .readTimeout(60, TimeUnit.SECONDS)
-//                .build()
-//
-//            // 3. Формируем запрос в формате JSON
-//            val messages = JSONArray().apply {
-//                put(JSONObject().apply {
-//                    put("role", "user")
-//                    put("content", prompt)
-//                })
-//            }
-//
-//            val jsonBody = JSONObject().apply {
-//                put("model", "deepseek-chat")
-//                put("messages", messages)
-//                put("stream", false)
-//                put("max_tokens", 4000)
-//                put("temperature", 0.7)
-//            }
-//
-//            println("Отправляю запрос к DeepSeek...")
-//            println("Длина промпта: ${prompt.length} символов")
-//
-//            // 4. Создаем HTTP запрос
-//            val request = Request.Builder()
-//                .url("https://api.deepseek.com/chat/completions")
-//                .addHeader("Authorization", "Bearer $apiKey")
-//                .addHeader("Content-Type", "application/json")
-//                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-//                .build()
-//
-//            // 5. Выполняем запрос
-//            val response = client.newCall(request).execute()
-//            val responseBody = response.body?.string()
-//
-//            println("Ответ от DeepSeek: код ${response.code}")
-//
-//            // 6. Обрабатываем ответ
-//            when {
-//                !response.isSuccessful -> {
-//                    val error = when (response.code) {
-//                        401 -> "❌ Неверный API ключ DeepSeek"
-//                        429 -> "❌ Превышен лимит запросов. Попробуйте позже."
-//                        500 -> "❌ Ошибка сервера DeepSeek"
-//                        else -> "❌ Ошибка ${response.code}: ${response.message}"
-//                    }
-//                    "$error\nТело ответа: ${responseBody?.take(200)}"
-//                }
-//
-//                responseBody == null -> {
-//                    "❌ Пустой ответ от DeepSeek"
-//                }
-//
-//                else -> {
-//                    try {
-//                        // 7. Парсим JSON ответ
-//                        val json = JSONObject(responseBody)
-//
-//                        if (!json.has("choices")) {
-//                            return@withContext "❌ Неверный формат ответа от DeepSeek"
-//                        }
-//
-//                        val choices = json.getJSONArray("choices")
-//                        if (choices.length() == 0) {
-//                            return@withContext "❌ Пустой ответ от DeepSeek"
-//                        }
-//
-//                        val firstChoice = choices.getJSONObject(0)
-//                        val message = firstChoice.getJSONObject("message")
-//                        val content = message.getString("content")
-//
-//                        // 8. Очищаем ответ (иногда AI добавляет лишний текст)
-//                        val cleanedContent = content
-//                            .replace("```json", "")
-//                            .replace("```", "")
-//                            .trim()
-//
-//                        println("Успешно получен ответ от DeepSeek (${cleanedContent.length} символов)")
-//
-//                        // 9. Добавляем информацию о токенах (опционально)
-//                        if (json.has("usage")) {
-//                            val usage = json.getJSONObject("usage")
-//                            val totalTokens = usage.getInt("totalTokens")
-//                            println("Использовано токенов: $totalTokens")
-//                        }
-//
-//                        cleanedContent
-//
-//                    } catch (e: Exception) {
-//                        "❌ Ошибка парсинга JSON от DeepSeek: ${e.message}\n\nОтвет: ${responseBody.take(500)}"
-//                    }
-//                }
-//            }
-//
-//        } catch (e: java.net.SocketTimeoutException) {
-//            "❌ Таймаут подключения к DeepSeek. Проверьте интернет."
-//        } catch (e: java.net.UnknownHostException) {
-//            "❌ Не удается подключиться к DeepSeek. Проверьте интернет."
-//        } catch (e: Exception) {
-//            "❌ Ошибка DeepSeek: ${e.message ?: "Неизвестная ошибка"}\n${e.stackTraceToString().take(200)}"
-//        }
-//    }
-//}
+
+// Функция для очистки ответа Gemini
+private fun cleanGeminiResponse(response: String): String {
+    var cleaned = response.trim()
+
+    // Убираем markdown блоки
+    if (cleaned.startsWith("```json")) {
+        cleaned = cleaned.substringAfter("```json").trim()
+    }
+    if (cleaned.startsWith("```")) {
+        cleaned = cleaned.substringAfter("```").trim()
+    }
+    if (cleaned.endsWith("```")) {
+        cleaned = cleaned.substringBeforeLast("```").trim()
+    }
+
+    // Находим начало и конец JSON
+    val jsonStart = cleaned.indexOf('{')
+    val jsonEnd = cleaned.lastIndexOf('}') + 1
+
+    return if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        cleaned.substring(jsonStart, jsonEnd)
+    } else {
+        cleaned
+    }
+}
+
+// Функция для получения изображения на основе тегов рецепта
+fun getFoodImageByTags(tags: List<String>): String {
+    if (tags.isEmpty()) return getDefaultFoodImage()
+
+    val mainTag = tags.first().lowercase()
+
+    // Карта тегов к URL изображений Unsplash
+    val foodImagesMap = mapOf(
+        // Завтраки
+        "омлет" to "https://images.unsplash.com/photo-1551782450-17144efb9c50",
+        "яичница" to "https://images.unsplash.com/photo-1551782450-17144efb9c50",
+        "блины" to "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
+        "каша" to "https://images.unsplash.com/photo-1505253668822-42074d58a7c6",
+        "тост" to "https://images.unsplash.com/photo-1483695028939-5bb13f8648b0",
+
+        // Основные блюда
+        "паста" to "https://images.unsplash.com/photo-1563379926898-05f4575a45d8",
+        "спагетти" to "https://images.unsplash.com/photo-1563379926898-05f4575a45d8",
+        "пицца" to "https://images.unsplash.com/photo-1513104890138-7c749659a591",
+        "бургер" to "https://images.unsplash.com/photo-1568901346375-23c9450c58cd",
+        "стейк" to "https://images.unsplash.com/photo-1600891964092-4316c288032e",
+        "курица" to "https://images.unsplash.com/photo-1532550907401-a500c9a57435",
+        "рыба" to "https://images.unsplash.com/photo-1467003909585-2f8a72700288",
+
+        // Супы
+        "суп" to "https://images.unsplash.com/photo-1547592166-23ac45744acd",
+        "борщ" to "https://images.unsplash.com/photo-1547592166-23ac45744acd",
+        "щи" to "https://images.unsplash.com/photo-1547592166-23ac45744acd",
+
+        // Салаты
+        "салат" to "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
+        "цезарь" to "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
+
+        // Десерты
+        "десерт" to "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e",
+        "торт" to "https://images.unsplash.com/photo-1578985545062-69928b1d9587",
+        "печенье" to "https://images.unsplash.com/photo-1558961363-fa8fdf82db35",
+        "пирог" to "https://images.unsplash.com/photo-1565958011703-44f9829ba187",
+
+        // Напитки
+        "напиток" to "https://images.unsplash.com/photo-1551024709-8f23befc6f87",
+        "сок" to "https://images.unsplash.com/photo-1551024709-8f23befc6f87",
+        "чай" to "https://images.unsplash.com/photo-1561047029-3000c68339ca",
+        "кофе" to "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
+    )
+
+    // Ищем подходящее изображение
+    return foodImagesMap.entries.firstOrNull { (tag, _) ->
+        mainTag.contains(tag, ignoreCase = true)
+    }?.value ?: getDefaultFoodImage()
+}
+
+fun getDefaultFoodImage(): String {
+    return "https://images.unsplash.com/photo-1504674900247-0877df9cc836"
+}
+
+// Функция для форматирования URL
+fun formatUnsplashUrl(baseUrl: String, width: Int = 800, height: Int = 600): String {
+    return "$baseUrl?w=$width&h=$height&fit=crop&auto=format"
+}

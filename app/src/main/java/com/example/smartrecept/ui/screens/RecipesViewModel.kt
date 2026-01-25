@@ -442,5 +442,51 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
 
+    fun saveAIRecipe(
+        title: String,
+        tags: List<String>,
+        time: String,
+        servings: Int,
+        ingredients: List<String>,
+        steps: List<String>,
+        notes: List<String>,
+        image: String? = null,
+        stepImages: List<String?> = emptyList(),
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val recipe = Recipe(
+                    title = title,
+                    tags = tags,
+                    time = time,
+                    servings = servings,
+                    image = image ?: "",
+                    ingredients = ingredients,
+                    steps = steps,
+                    stepImages = stepImages,
+                    notes = notes,
+                    isFavorite = false,
+                    isCooked = false,
+                )
+
+                // Сохраняем в БД
+                dataSource.insertRecipe(recipe)
+
+                // Обновляем список рецептов
+                loadRecipes()
+
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onError("Не удалось сохранить рецепт: ${e.message}")
+                }
+            }
+        }
+    }
+
     // Дополнительные методы по мере необходимости
 }
