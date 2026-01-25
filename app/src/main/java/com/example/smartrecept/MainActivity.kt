@@ -21,13 +21,10 @@ import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.data.settings.UserPreferencesRepository
 import android.content.Context
 import android.content.res.Configuration
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import android.os.Build
+import android.view.WindowManager
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
@@ -54,6 +51,18 @@ import rememberScrollHandler
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Улучшаем производительность анимаций
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+
+        // Оптимизация для анимаций
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+        }
+
+        // Запускаем инициализацию БД в фоне
         CoroutineScope(Dispatchers.IO).launch {
             DatasourceRecipes(applicationContext).initializeDatabase()
         }
@@ -103,7 +112,7 @@ fun SmartReceptApp() {
         isDarken = when (userPrefs.themeMode) {
             "light" -> false
             "dark" -> true
-            else -> if (getSystemTheme(LocalContext.current) === "light") false else true
+            else -> getSystemTheme(LocalContext.current) == "dark"
         }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -116,16 +125,37 @@ fun SmartReceptApp() {
                     navController = navController,
                     startDestination = Screen.Home.route,
                     modifier = Modifier
-                        .padding(innerPadding).navigationBarsPadding()
+                        .padding(innerPadding)
+                        .navigationBarsPadding()
                 ) {
-                    animatedComposable(Screen.Home.route) {
-                        HomeScreen(repository = userPrefsRepo, navController = navController, scrollHandler = scrollHandler)
+                    // Главные экраны с боковой анимацией
+                    animatedComposable(
+                        Screen.Home.route,
+                        animationType = NavigationAnimation.HORIZONTAL
+                    ) {
+                        HomeScreen(
+                            repository = userPrefsRepo,
+                            navController = navController,
+                            scrollHandler = scrollHandler
+                        )
                     }
-                    animatedComposable(Screen.Search.route) {
-                        SearchScreen(repository = userPrefsRepo, navController = navController, scrollHandler = scrollHandler)
+
+                    animatedComposable(
+                        Screen.Search.route,
+                        animationType = NavigationAnimation.HORIZONTAL
+                    ) {
+                        SearchScreen(
+                            repository = userPrefsRepo,
+                            navController = navController,
+                            scrollHandler = scrollHandler
+                        )
                     }
-                    // В NavGraph
-                    animatedComposable("camera/{purpose}") { backStackEntry ->
+
+                    // Камера с плавным появлением
+                    animatedComposable(
+                        "camera/{purpose}",
+                        animationType = NavigationAnimation.FADE
+                    ) { backStackEntry ->
                         val purpose = backStackEntry.arguments?.getString("purpose") ?: "main"
                         CameraScreen(
                             purpose = purpose,
@@ -139,22 +169,32 @@ fun SmartReceptApp() {
                             }
                         )
                     }
-                    animatedComposable(Screen.Favorites.route) {
+
+                    animatedComposable(
+                        Screen.Favorites.route,
+                        animationType = NavigationAnimation.HORIZONTAL
+                    ) {
                         FavoritesScreen(repository = userPrefsRepo, navController = navController)
                     }
-                    animatedComposable(Screen.Journal.route) {
+
+                    animatedComposable(
+                        Screen.Journal.route,
+                        animationType = NavigationAnimation.HORIZONTAL
+                    ) {
                         JournalScreen(repository = userPrefsRepo, navController = navController)
                     }
-                    animatedComposable(Screen.Settings.route) {
+
+                    animatedComposable(
+                        Screen.Settings.route,
+                        animationType = NavigationAnimation.HORIZONTAL
+                    ) {
                         SettingsScreen(repository = userPrefsRepo, scrollHandler = scrollHandler)
                     }
+
+                    // Детали рецепта - вертикальная анимация
                     animatedComposable(
                         "recipe/{id}",
-                        enterDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                        exitDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                        popEnterDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                        popExitDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                        duration = 400
+                        animationType = NavigationAnimation.VERTICAL
                     ) { backStackEntry ->
                         val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
                         if (recipeId != null) {
@@ -165,13 +205,11 @@ fun SmartReceptApp() {
                             )
                         }
                     }
+
+                    // Экран приготовления - вертикальная анимация
                     animatedComposable(
                         "recipe/cook/{id}",
-                        enterDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                        exitDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                        popEnterDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                        popExitDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                        duration = 400
+                        animationType = NavigationAnimation.VERTICAL
                     ) { backStackEntry ->
                         val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
                         if (recipeId != null) {
@@ -182,24 +220,34 @@ fun SmartReceptApp() {
                             )
                         }
                     }
+
+                    // Добавление/редактирование рецепта - вертикальная анимация
                     animatedComposable(
                         "addEditRecipe/{id}",
-                        enterDirection = AnimatedContentTransitionScope.SlideDirection.Up
+                        animationType = NavigationAnimation.VERTICAL
                     ) { backStackEntry ->
                         val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
                         if (recipeId != null) {
                             AddEditRecipeScreen(
-                                recipeId = if(recipeId != 0) recipeId else null,
+                                recipeId = if (recipeId != 0) recipeId else null,
                                 navController = navController
                             )
                         }
                     }
 
-                    animatedComposable(Screen.AIAssistant.route) {
+                    // AI ассистент - плавное появление
+                    animatedComposable(
+                        Screen.AIAssistant.route,
+                        animationType = NavigationAnimation.FADE
+                    ) {
                         AIassistLogic(navController = navController)
                     }
 
-                    animatedComposable("gemini_test") {
+                    // Gemini тест - плавное появление
+                    animatedComposable(
+                        "gemini_test",
+                        animationType = NavigationAnimation.FADE
+                    ) {
                         GeminiTestScreen(navController = navController)
                     }
                 }
@@ -213,43 +261,222 @@ fun SmartReceptApp() {
             )
 
             AnimatedVisibility(
-                // Панель видна, если текущий маршрут находится в нашем списке
                 visible = currentRoute in bottomNavRoutes,
-                // Добавляем красивую анимацию появления/исчезновения
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                // Выравниваем по низу, как и раньше
+                enter = slideInVertically(
+                    initialOffsetY = { fullHeight -> fullHeight },
+                    animationSpec = tween(350, easing = FastOutSlowInEasing)
+                ) + fadeIn(tween(350, easing = FastOutSlowInEasing)),
+                exit = slideOutVertically(
+                    targetOffsetY = { fullHeight -> fullHeight },
+                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                ) + fadeOut(tween(250, easing = FastOutSlowInEasing)),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                // Ваш компонент без изменений
-                CustomBottomNavigation(navController = navController, scrollHandler = scrollHandler)
+                CustomBottomNavigation(
+                    navController = navController,
+                    scrollHandler = scrollHandler
+                )
             }
         }
     }
 }
 
+// Перечисление для типов анимации
+enum class NavigationAnimation {
+    HORIZONTAL,   // Горизонтальный слайд для основных экранов
+    VERTICAL,     // Вертикальный слайд для деталей
+    FADE,         // Плавное появление
+    NONE          // Без анимации
+}
+
+// Улучшенная функция для анимированных переходов
 fun NavGraphBuilder.animatedComposable(
     route: String,
-    enterDirection: AnimatedContentTransitionScope.SlideDirection = AnimatedContentTransitionScope.SlideDirection.Left,
-    exitDirection: AnimatedContentTransitionScope.SlideDirection = AnimatedContentTransitionScope.SlideDirection.Left,
-    popEnterDirection: AnimatedContentTransitionScope.SlideDirection = AnimatedContentTransitionScope.SlideDirection.Right,
-    popExitDirection: AnimatedContentTransitionScope.SlideDirection = AnimatedContentTransitionScope.SlideDirection.Right,
-    duration: Int = 300,
+    animationType: NavigationAnimation = NavigationAnimation.HORIZONTAL,
+    duration: Int = 500,
     content: @Composable (NavBackStackEntry) -> Unit
 ) {
     composable(
         route = route,
         enterTransition = {
-            slideIntoContainer(enterDirection, tween(duration)) + fadeIn(tween(duration))
+            when (animationType) {
+                NavigationAnimation.HORIZONTAL -> {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { it }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.VERTICAL -> {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { -it }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.FADE -> {
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                }
+                NavigationAnimation.NONE -> {
+                    fadeIn(animationSpec = tween(1))
+                }
+            }
         },
         exitTransition = {
-            slideOutOfContainer(exitDirection, tween(duration)) + fadeOut(tween(duration))
+            when (animationType) {
+                NavigationAnimation.HORIZONTAL -> {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        ),
+                        targetOffset = { it }
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = duration - 50,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.VERTICAL -> {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                        animationSpec = tween(
+                            durationMillis = duration - 50,
+                            easing = FastOutSlowInEasing
+                        ),
+                        targetOffset = { it }
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = duration - 50,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.FADE -> {
+                    fadeOut(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                }
+                NavigationAnimation.NONE -> {
+                    fadeOut(animationSpec = tween(1))
+                }
+            }
         },
         popEnterTransition = {
-            slideIntoContainer(popEnterDirection, tween(duration)) + fadeIn(tween(duration))
+            when (animationType) {
+                NavigationAnimation.HORIZONTAL -> {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { -it }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.VERTICAL -> {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                        animationSpec = tween(
+                            durationMillis = duration + 50,
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { it }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = duration + 50,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.FADE -> {
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                }
+                NavigationAnimation.NONE -> {
+                    fadeIn(animationSpec = tween(1))
+                }
+            }
         },
         popExitTransition = {
-            slideOutOfContainer(popExitDirection, tween(duration)) + fadeOut(tween(duration))
+            when (animationType) {
+                NavigationAnimation.HORIZONTAL -> {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(
+                            durationMillis = duration - 50,
+                            easing = FastOutSlowInEasing
+                        ),
+                        targetOffset = { -it }
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = duration - 50,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.VERTICAL -> {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        ),
+                        targetOffset = { -it }
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                NavigationAnimation.FADE -> {
+                    fadeOut(
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                }
+                NavigationAnimation.NONE -> {
+                    fadeOut(animationSpec = tween(1))
+                }
+            }
         }
     ) { backStackEntry ->
         content(backStackEntry)
