@@ -7,6 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.sharp.*
+import androidx.compose.material.icons.twotone.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -24,32 +28,28 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Restaurant
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.Alignment
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import com.example.smartrecept.data.recipes.DatasourceRecipes
+import com.example.smartrecept.ui.components.AIassistLogic
 import com.example.smartrecept.ui.components.CameraScreen
+import com.example.smartrecept.ui.components.CustomBottomNavigation
 import com.example.smartrecept.ui.screens.CookingScreen
 
 import com.example.smartrecept.ui.screens.SettingsScreen
 import com.example.smartrecept.ui.screens.SearchScreen
 import com.example.smartrecept.ui.screens.HomeScreen
 import com.example.smartrecept.ui.screens.FavoritesScreen
+import com.example.smartrecept.ui.screens.GeminiTestScreen
 import com.example.smartrecept.ui.screens.JournalScreen
 import com.example.smartrecept.ui.screens.RecipeDetailScreen
-import com.example.smartrecept.ui.screens.RecipeViewModel
 
 import com.example.smartrecept.ui.theme.SmartReceptTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import rememberScrollHandler
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +71,8 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Settings : Screen("settings", "Настройки", Icons.Default.Settings)
     object AddRecipe : Screen("addRecipe", "Новый рецепт", Icons.Default.Add)
     object Journal : Screen("journal", "Журнал", Icons.Default.Restaurant)
+    object AIAssistant : Screen("ai_assistant", "AI Ассистент", Icons.Default.Chat)
+    object GeminiTest : Screen("gemini_test", "AI Тест", Icons.Default.SmartToy)
 }
 
 val filterChipsList = listOf("Завтрак", "Основное", "Суп", "Салат", "Гарнир", "Быстрое", "Сладкое", "Десерт")
@@ -94,180 +96,133 @@ fun getSystemTheme(context: Context): String {
 fun SmartReceptApp() {
     val context = LocalContext.current
     val userPrefsRepo = remember { UserPreferencesRepository(context) }
-
+    val scrollHandler = rememberScrollHandler()
     val userPrefs by userPrefsRepo.preferencesFlow.collectAsState(initial = UserPreferences())
 
-//    MaterialTheme(
-//        colorScheme = when (userPrefs.themeMode) {
-//            "light" -> lightColorScheme()
-//            "dark" -> darkColorScheme()
-//            else -> if (getSystemTheme(LocalContext.current) === "light") lightColorScheme() else darkColorScheme()
-//        }
-//    )
     SmartReceptTheme(
         isDarken = when (userPrefs.themeMode) {
             "light" -> false
             "dark" -> true
             else -> if (getSystemTheme(LocalContext.current) === "light") false else true
         }
-    )
-    {
-        val navController = rememberNavController()
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            val navController = rememberNavController()
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
 
-        Scaffold(
-            bottomBar = {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-
-                AnimatedVisibility(
-                    visible = currentDestination?.route in listOf("home", "search", "journal", "settings"),
-                    enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(250)),
-                    exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(250))
+            Scaffold { innerPadding ->
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.Home.route,
+                    modifier = Modifier
+                        .padding(innerPadding).navigationBarsPadding()
                 ) {
-                    NavigationBar(
-                        modifier = Modifier.height(60.dp),
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        tonalElevation = 0.dp
-                    ) {
-                        bottomNavItems.forEach { screen ->
-                            NavigationBarItem(
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                icon = {
-                                    val icon = if (currentDestination?.route == screen.route) {
-                                        when (screen) {
-                                            Screen.Home -> Icons.Filled.Home
-                                            Screen.Search -> Icons.Filled.Search
-                                            Screen.Favorites -> Icons.Filled.Favorite
-                                            Screen.Journal -> Icons.Filled.Restaurant
-                                            Screen.Settings -> Icons.Filled.Settings
-                                            else -> screen.icon
-                                        }
-                                    } else {
-                                        when (screen) {
-                                            Screen.Home -> Icons.Outlined.Home
-                                            Screen.Search -> Icons.Outlined.Search
-                                            Screen.Favorites -> Icons.Outlined.Favorite
-                                            Screen.Journal -> Icons.Outlined.Restaurant
-                                            Screen.Settings -> Icons.Outlined.Settings
-                                            else -> screen.icon
-                                        }
-                                    }
-                                    Icon(icon, contentDescription = screen.title,
-                                        modifier = Modifier.size(24.dp))
-                                },
-                                label = {
-                                    Text(
-                                        screen.title,
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        lineHeight = 16.sp
-                                    )
-                                },
-                                selected = currentDestination?.route == screen.route,
-                                onClick = {
-                                    navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.startDestinationId) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    indicatorColor = MaterialTheme.colorScheme.surfaceContainer
-                                )
+                    animatedComposable(Screen.Home.route) {
+                        HomeScreen(repository = userPrefsRepo, navController = navController, scrollHandler = scrollHandler)
+                    }
+                    animatedComposable(Screen.Search.route) {
+                        SearchScreen(repository = userPrefsRepo, navController = navController, scrollHandler = scrollHandler)
+                    }
+                    // В NavGraph
+                    animatedComposable("camera/{purpose}") { backStackEntry ->
+                        val purpose = backStackEntry.arguments?.getString("purpose") ?: "main"
+                        CameraScreen(
+                            purpose = purpose,
+                            onImageCaptured = { uri, purpose ->
+                                navController.previousBackStackEntry?.savedStateHandle?.set("camera_result", uri.toString())
+                                navController.previousBackStackEntry?.savedStateHandle?.set("camera_purpose", purpose)
+                                navController.popBackStack()
+                            },
+                            onError = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    animatedComposable(Screen.Favorites.route) {
+                        FavoritesScreen(repository = userPrefsRepo, navController = navController)
+                    }
+                    animatedComposable(Screen.Journal.route) {
+                        JournalScreen(repository = userPrefsRepo, navController = navController)
+                    }
+                    animatedComposable(Screen.Settings.route) {
+                        SettingsScreen(repository = userPrefsRepo, scrollHandler = scrollHandler)
+                    }
+                    animatedComposable(
+                        "recipe/{id}",
+                        enterDirection = AnimatedContentTransitionScope.SlideDirection.Up,
+                        exitDirection = AnimatedContentTransitionScope.SlideDirection.Down,
+                        popEnterDirection = AnimatedContentTransitionScope.SlideDirection.Down,
+                        popExitDirection = AnimatedContentTransitionScope.SlideDirection.Up,
+                        duration = 400
+                    ) { backStackEntry ->
+                        val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+                        if (recipeId != null) {
+                            RecipeDetailScreen(
+                                recipeId = recipeId,
+                                repository = userPrefsRepo,
+                                navController = navController
                             )
                         }
                     }
-                }
-
-            }
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = Screen.Home.route,
-                modifier = Modifier.padding(innerPadding).navigationBarsPadding()
-            ) {
-                animatedComposable(Screen.Home.route) {
-                    HomeScreen(repository = userPrefsRepo, navController = navController)
-                }
-                animatedComposable(Screen.Search.route) {
-                    SearchScreen(repository = userPrefsRepo, navController = navController)
-                }
-                // В NavGraph
-                animatedComposable("camera/{purpose}") { backStackEntry ->
-                    val purpose = backStackEntry.arguments?.getString("purpose") ?: "main"
-                    CameraScreen(
-                        purpose = purpose,
-                        onImageCaptured = { uri, purpose ->
-                            navController.previousBackStackEntry?.savedStateHandle?.set("camera_result", uri.toString())
-                            navController.previousBackStackEntry?.savedStateHandle?.set("camera_purpose", purpose)
-                            navController.popBackStack()
-                        },
-                        onError = {
-                            navController.popBackStack()
+                    animatedComposable(
+                        "recipe/cook/{id}",
+                        enterDirection = AnimatedContentTransitionScope.SlideDirection.Up,
+                        exitDirection = AnimatedContentTransitionScope.SlideDirection.Down,
+                        popEnterDirection = AnimatedContentTransitionScope.SlideDirection.Down,
+                        popExitDirection = AnimatedContentTransitionScope.SlideDirection.Up,
+                        duration = 400
+                    ) { backStackEntry ->
+                        val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+                        if (recipeId != null) {
+                            CookingScreen(
+                                recipeId = recipeId,
+                                repository = userPrefsRepo,
+                                navController = navController
+                            )
                         }
-                    )
-                }
-                animatedComposable(Screen.Favorites.route) {
-                    FavoritesScreen(repository = userPrefsRepo, navController = navController)
-                }
-                animatedComposable(Screen.Journal.route) {
-                    JournalScreen(repository = userPrefsRepo, navController = navController)
-                }
-                animatedComposable(Screen.Settings.route) {
-                    SettingsScreen(repository = userPrefsRepo)
-                }
-                animatedComposable(
-                    "recipe/{id}",
-                    enterDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                    exitDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                    popEnterDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                    popExitDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                    duration = 400
-                ) { backStackEntry ->
-                    val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
-                    if (recipeId != null) {
-                        RecipeDetailScreen(
-                            recipeId = recipeId,
-                            repository = userPrefsRepo,
-                            navController = navController
-                        )
+                    }
+                    animatedComposable(
+                        "addEditRecipe/{id}",
+                        enterDirection = AnimatedContentTransitionScope.SlideDirection.Up
+                    ) { backStackEntry ->
+                        val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+                        if (recipeId != null) {
+                            AddEditRecipeScreen(
+                                recipeId = if(recipeId != 0) recipeId else null,
+                                navController = navController
+                            )
+                        }
+                    }
+
+                    animatedComposable(Screen.AIAssistant.route) {
+                        AIassistLogic(navController = navController)
+                    }
+
+                    animatedComposable("gemini_test") {
+                        GeminiTestScreen(navController = navController)
                     }
                 }
-                animatedComposable(
-                    "recipe/cook/{id}",
-                    enterDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                    exitDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                    popEnterDirection = AnimatedContentTransitionScope.SlideDirection.Down,
-                    popExitDirection = AnimatedContentTransitionScope.SlideDirection.Up,
-                    duration = 400
-                ) { backStackEntry ->
-                    val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
-                    if (recipeId != null) {
-                        CookingScreen(
-                            recipeId = recipeId,
-                            repository = userPrefsRepo,
-                            navController = navController
-                        )
-                    }
-                }
-                animatedComposable(
-                    "addEditRecipe/{id}",
-                    enterDirection = AnimatedContentTransitionScope.SlideDirection.Up
-                ) { backStackEntry ->
-                    val recipeId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
-                    if (recipeId != null) {
-                        AddEditRecipeScreen(
-                            recipeId = if(recipeId != 0) recipeId else null,
-                            navController = navController
-                        )
-                    }
-                }
+            }
+
+            val bottomNavRoutes = listOf(
+                Screen.Home.route,
+                Screen.Search.route,
+                Screen.Journal.route,
+                Screen.Settings.route
+            )
+
+            AnimatedVisibility(
+                // Панель видна, если текущий маршрут находится в нашем списке
+                visible = currentRoute in bottomNavRoutes,
+                // Добавляем красивую анимацию появления/исчезновения
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut(),
+                // Выравниваем по низу, как и раньше
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                // Ваш компонент без изменений
+                CustomBottomNavigation(navController = navController, scrollHandler = scrollHandler)
             }
         }
     }

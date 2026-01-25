@@ -2,6 +2,7 @@
 package com.example.smartrecept.ui.screens
 
 import RecipeViewModelFactory
+import ScrollHandler
 import android.app.Application
 import android.content.Intent
 import android.provider.OpenableColumns
@@ -47,29 +48,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.smartrecept.data.recipes.DatasourceRecipes
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.toList
 import java.io.File
 import java.io.FileOutputStream
 
 @Composable
 fun SettingsScreen(
     repository: UserPreferencesRepository,
-    modifier: Modifier = Modifier
-) {
-    SettingsApp(repository, modifier)
-}
-
-@Composable
-fun SettingsApp(
-    repository: UserPreferencesRepository,
     modifier: Modifier = Modifier,
+    scrollHandler: ScrollHandler,
     viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)),
 ) {
     val scope = rememberCoroutineScope()
@@ -232,6 +223,7 @@ fun SettingsApp(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .nestedScroll(scrollHandler.createNestedScrollConnection())
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)

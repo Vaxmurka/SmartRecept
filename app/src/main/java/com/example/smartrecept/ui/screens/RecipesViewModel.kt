@@ -151,6 +151,24 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun importJSONAnswerAI(json: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val recipes = ExportIO.importFromJson(json)
+                println("recipes: $recipes")
+//                dataSource.replaceAllRecipesWithCatalog(recipes)
+
+//                withContext(Dispatchers.Main) {
+//                    onResult(true, "Импортировано ${recipes.size} рецептов")
+//                }
+            } catch (e: Exception) {
+//                withContext(Dispatchers.Main) {
+//                    onResult(false, "Ошибка импорта JSON: ${e.message}")
+//                }
+            }
+        }
+    }
+
     // Метод для получения всех рецептов для экспорта
     fun getAllRecipesForExport(): List<Recipe> {
         return recipes.value

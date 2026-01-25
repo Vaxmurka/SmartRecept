@@ -2,6 +2,7 @@
 package com.example.smartrecept.ui.screens
 
 import RecipeViewModelFactory
+import ScrollHandler
 import android.app.Application
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -17,8 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -35,16 +40,14 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 fun HomeScreen(
     repository: UserPreferencesRepository,
     navController: NavHostController,
+    scrollHandler: ScrollHandler,
     viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application))
 ) {
     val scope = rememberCoroutineScope()
     val preferences by repository.preferencesFlow.collectAsState(initial = UserPreferences())
-
     val recipes by viewModel.recipes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-
     val isRefreshing by viewModel.isRefreshing
-
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
 
     if (isLoading) {
@@ -54,14 +57,35 @@ fun HomeScreen(
     } else {
         Scaffold(
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { navController.navigate("addEditRecipe/${0}") },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Добавить рецепт")
+                    FloatingActionButton(
+                        onClick = { navController.navigate("addEditRecipe/${0}") },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp), // 💧 форма капли сбоку
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd) // по центру справа
+                            .offset(x = (20).dp) // немного сдвинуть от края
+                            .size(width = 60.dp, height = 80.dp) // продолговатая форма
+                            .graphicsLayer {
+                                shadowElevation = 10.dp.toPx()
+                                shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp)
+                                clip = true
+                            }
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Добавить рецепт",
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
-            }
+            },
+            floatingActionButtonPosition = FabPosition.End,
+            containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
             SwipeRefresh(
                 state = swipeRefreshState,
@@ -72,6 +96,7 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier
                         .padding(paddingValues)
+                        .nestedScroll(scrollHandler.createNestedScrollConnection())
                         .graphicsLayer {
                             clip = true
                             shape = RectangleShape
@@ -87,7 +112,6 @@ fun HomeScreen(
                 }
             }
         }
-
     }
 }
 

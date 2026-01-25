@@ -5,9 +5,6 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
 
-<!--    <uses-permission android:name="android.permission.CAMERA" />-->
-<!--    <uses-feature android:name="android.hardware.camera" android:required="false" />-->
-
     <!-- ********* Разрешения для камеры и доступа к изображениям ********* -->
 
     <!-- Camera permission -->
@@ -30,6 +27,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 
     <application
+        android:name=".SmartReceptApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -37,7 +35,9 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SmartRecept">
+        android:theme="@style/Theme.SmartRecept"
+        android:enableOnBackInvokedCallback="true"
+        tools:ignore="MissingClass">
         <!-- Файл Provider для доступа к кэшу и камере -->
         <provider
             android:name="androidx.core.content.FileProvider"

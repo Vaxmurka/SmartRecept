@@ -1,306 +1,7 @@
-//// ui/screens/SearchScreen.kt
-//package com.example.smartrecept.ui.screens
-//
-//import RecipeViewModelFactory
-//import android.app.Application
-//import androidx.compose.foundation.BorderStroke
-//import androidx.compose.foundation.ExperimentalFoundationApi
-//import androidx.compose.foundation.background
-//import androidx.compose.foundation.horizontalScroll
-//import androidx.compose.foundation.layout.*
-//import androidx.compose.foundation.lazy.LazyColumn
-//import androidx.compose.foundation.lazy.items
-//import androidx.compose.foundation.rememberScrollState
-//import androidx.compose.material.icons.Icons
-//import androidx.compose.material.icons.filled.*
-//import androidx.compose.material3.*
-//import androidx.compose.runtime.*
-//import androidx.compose.ui.Alignment
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.graphics.Color
-//import androidx.compose.ui.platform.LocalContext
-//import androidx.compose.ui.tooling.preview.Preview
-//import androidx.compose.ui.unit.dp
-//import androidx.lifecycle.viewmodel.compose.viewModel
-//import androidx.navigation.NavHostController
-//import androidx.navigation.compose.rememberNavController
-//import com.example.smartrecept.data.recipes.Recipe
-//import com.example.smartrecept.data.settings.UserPreferencesRepository
-//import com.example.smartrecept.filterChipsList
-//import com.example.smartrecept.ui.components.RecipeCard
-//import com.example.smartrecept.ui.components.getTagColor
-//import com.example.smartrecept.Screen
-//import androidx.compose.foundation.clickable
-//import androidx.compose.ui.draw.clip
-//import androidx.compose.foundation.layout.Arrangement
-//import androidx.compose.foundation.layout.FlowRow
-//
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun SearchScreen(
-//    repository: UserPreferencesRepository,
-//    navController: NavHostController,
-//    viewModel: RecipeViewModel = viewModel(
-//        factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)
-//    )
-//) {
-//    var query by remember { mutableStateOf("") }
-//    var selectedFilter by remember { mutableStateOf<String?>(null) }
-//    var useAndLogic by remember { mutableStateOf(false) } // переключатель И / ИЛИ
-//
-//    val searchTerms = query
-//        .split(" ")
-//        .map { it.trim() }
-//        .filter { it.isNotBlank() }
-//
-//    val recipes = viewModel.recipes.collectAsState().value
-//
-//    // 🔎 Фильтрация рецептов
-//    val filteredRecipes = recipes.filter { recipe ->
-//        val matchesQuery = if (searchTerms.isEmpty()) {
-//            true
-//        } else if (useAndLogic) {
-//            // логика И
-//            searchTerms.all { term ->
-//                recipe.title.contains(term, ignoreCase = true) ||
-//                        recipe.tags.any { tag -> tag.contains(term, ignoreCase = true) } ||
-//                        recipe.ingredients.any { ing -> ing.contains(term, ignoreCase = true) } ||
-//                        recipe.steps.any { step -> step.contains(term, ignoreCase = true) }
-//            }
-//        } else {
-//            // логика ИЛИ
-//            searchTerms.any { term ->
-//                recipe.title.contains(term, ignoreCase = true) ||
-//                        recipe.tags.any { tag -> tag.contains(term, ignoreCase = true) } ||
-//                        recipe.ingredients.any { ing -> ing.contains(term, ignoreCase = true) } ||
-//                        recipe.steps.any { step -> step.contains(term, ignoreCase = true) }
-//            }
-//        }
-//
-//        val matchesFilter = selectedFilter == null ||
-//                recipe.tags.any { tag -> tag.equals(selectedFilter, ignoreCase = true) }
-//
-//        matchesQuery && matchesFilter
-//    }
-//
-//    Scaffold(
-//        topBar = {
-//            CustomSearchPanel(
-//                query = query,
-//                onQueryChange = { query = it },
-//                navController = navController,
-//                selectedFilter = selectedFilter,
-//                onFilterChange = { selectedFilter = it }
-//            )
-//        }
-//    ) { padding ->
-//        Column(
-//            modifier = Modifier
-//                .padding(padding)
-//                .fillMaxSize()
-//        ) {
-//            // 🔹 Переключатель логики И / ИЛИ
-//            Row(
-//                verticalAlignment = Alignment.CenterVertically,
-//                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-//            ) {
-//                Text("Режим поиска:", style = MaterialTheme.typography.bodyMedium)
-//                Spacer(Modifier.width(8.dp))
-//                FilterChip(
-//                    selected = !useAndLogic,
-//                    onClick = { useAndLogic = false },
-//                    label = { Text("ИЛИ") },
-//                    modifier = Modifier.padding(end = 8.dp)
-//                )
-//                FilterChip(
-//                    selected = useAndLogic,
-//                    onClick = { useAndLogic = true },
-//                    label = { Text("И") }
-//                )
-//            }
-//
-//            // 🔹 Фильтры тегов
-//            FilterChips(selected = selectedFilter, onSelect = { selectedFilter = it })
-//            Divider(modifier = Modifier.padding(vertical = 8.dp))
-//
-//            when {
-//                query.isBlank() -> {
-//                    // 1️⃣ Стартовый экран поиска
-//                    StartSearchContent(
-//                        suggestions = listOf("Паста", "Суп", "Курица", "Салат"),
-//                        onSuggestionClick = { query = it }
-//                    )
-//                }
-//                filteredRecipes.isNotEmpty() -> {
-//                    // 2️⃣ Есть результаты
-//                    LazyColumn(
-//                        verticalArrangement = Arrangement.spacedBy(8.dp),
-//                        modifier = Modifier.fillMaxSize()
-//                    ) {
-//                        items(filteredRecipes) { recipe ->
-//                            RecipeCard(
-//                                recipe = recipe,
-//                                isFavorite = recipe.isFavorite,
-//                                onToggleFavorite = {
-//                                    viewModel.toggleFavorite(recipe.id, !recipe.isFavorite)
-//                                },
-//                                navController = navController,
-//                                onDelete = { viewModel.deleteRecipe(recipe.id) },
-//                                onEdit = { navController.navigate("addEditRecipe/${recipe.id}") },
-//                            )
-//                        }
-//                    }
-//                }
-//                else -> {
-//                    // 3️⃣ Ничего не найдено → показываем предложения
-//                    StartSearchContent(
-//                        suggestions = listOf("Рыба", "Быстро", "Десерт", "Овощи"),
-//                        onSuggestionClick = { query = it }
-//                    )
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//@Composable
-//fun FilterChips(
-//    selected: String?,
-//    onSelect: (String?) -> Unit
-//) {
-//    val options = filterChipsList
-//    Row(
-//        Modifier
-//            .padding(vertical = 8.dp)
-//            .horizontalScroll(rememberScrollState())
-//    ) {
-//        options.forEach { label ->
-//            val isSelected = label == selected
-//            AssistChip(
-//                onClick = { onSelect(if (isSelected) null else label) },
-//                label = { Text(label) },
-//                colors = AssistChipDefaults.assistChipColors(
-//                    containerColor = if (isSelected) getTagColor(label) else MaterialTheme.colorScheme.surfaceVariant
-//                ),
-//                modifier = Modifier.padding(end = 8.dp),
-//                border = BorderStroke(
-//                    color = Color.Transparent,
-//                    width = 1.dp,
-//                )
-//            )
-//        }
-//    }
-//}
-//
-//@OptIn(ExperimentalLayoutApi::class)
-//@Composable
-//fun StartSearchContent(
-//    suggestions: List<String>,
-//    onSuggestionClick: (String) -> Unit
-//) {
-//    Column(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(16.dp)
-//    ) {
-//        Text(
-//            "Попробуйте поискать:",
-//            style = MaterialTheme.typography.titleMedium,
-//            color = MaterialTheme.colorScheme.onSurfaceVariant
-//        )
-//        Spacer(Modifier.height(8.dp))
-//        FlowRow(
-//            horizontalArrangement = Arrangement.spacedBy(8.dp),
-//            verticalArrangement = Arrangement.spacedBy(8.dp)
-//        ) {
-//            suggestions.forEach { suggestion ->
-//                AssistChip(
-//                    onClick = { onSuggestionClick(suggestion) },
-//                    label = { Text(suggestion) },
-//                    colors = AssistChipDefaults.assistChipColors(
-//                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-//                    )
-//                )
-//            }
-//        }
-//    }
-//}
-//
-//@Composable
-//fun CustomSearchPanel(
-//    query: String,
-//    readOnly: Boolean = false,
-//    onQueryChange: (String) -> Unit = {},
-//    navController: NavHostController,
-//    selectedFilter: String?,
-//    onFilterChange: (String?) -> Unit,
-//    modifier: Modifier = Modifier
-//) {
-//    Row(
-//        modifier = modifier
-//            .fillMaxWidth()
-//            .padding(horizontal = 8.dp, vertical = 8.dp)
-//            .heightIn(min = 56.dp),
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        // Поле поиска
-//        Box(
-//            modifier = Modifier
-//                .weight(1f)
-//                .padding(end = 8.dp)
-//                .height(50.dp)
-//                .clip(MaterialTheme.shapes.medium)
-//                .background(MaterialTheme.colorScheme.surfaceVariant)
-//                .align(Alignment.CenterVertically)
-//        ) {
-//            TextField(
-//                value = query,
-//                onValueChange = onQueryChange,
-//                placeholder = { Text("Поиск...") },
-//                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-//                readOnly = readOnly,
-//                trailingIcon = {
-//                    if (query.isNotEmpty()) {
-//                        IconButton(onClick = { onQueryChange("") }) {
-//                            Icon(Icons.Default.Close, contentDescription = "Очистить")
-//                        }
-//                    }
-//                },
-//                colors = TextFieldDefaults.colors(
-//                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-//                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-//                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-//                    focusedIndicatorColor = Color.Transparent,
-//                    unfocusedIndicatorColor = Color.Transparent,
-//                    disabledIndicatorColor = Color.Transparent
-//                ),
-//                singleLine = true,
-//                modifier = Modifier
-//                    .fillMaxSize()
-//                    .clickable { if (readOnly) navController.navigate("search") }
-//            )
-//        }
-//
-//        // Кнопка избранного
-//        IconButton(
-//            onClick = { navController.navigate(Screen.Favorites.route) },
-//            modifier = Modifier
-//                .size(50.dp)
-//                .clip(MaterialTheme.shapes.medium)
-//                .background(MaterialTheme.colorScheme.surfaceVariant)
-//        ) {
-//            Icon(
-//                imageVector = Icons.Default.Favorite,
-//                contentDescription = "Избранное",
-//                tint = MaterialTheme.colorScheme.primary
-//            )
-//        }
-//    }
-//}
-
 package com.example.smartrecept.ui.screens
 
 import RecipeViewModelFactory
+import ScrollHandler
 import android.app.Application
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -334,6 +35,7 @@ import com.example.smartrecept.Screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.RectangleShape
@@ -347,6 +49,7 @@ import kotlin.collections.filter
 fun SearchScreen(
     repository: UserPreferencesRepository,
     navController: NavHostController,
+    scrollHandler: ScrollHandler,
     viewModel: RecipeViewModel = viewModel(
         factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)
     )
@@ -492,47 +195,6 @@ fun SearchScreen(
             FilterChips(selected = selectedFilter, onSelect = { selectedFilter = it })
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-//            when {
-//                query.isBlank() -> {
-//                    StartSearchContent(
-//                        suggestions = listOf("Паста", "Суп", "Курица", "Салат"),
-//                        onSuggestionClick = { query = it }
-//                    )
-//                }
-//                filteredRecipes.isNotEmpty() -> {
-//                    LazyColumn(
-//                        verticalArrangement = Arrangement.spacedBy(8.dp),
-//                        modifier = Modifier.fillMaxSize()
-//                    ) {
-//                        items(filteredRecipes) { recipe ->
-//                            RecipeCard(
-//                                recipe = recipe,
-//                                isFavorite = recipe.isFavorite,
-//                                onToggleFavorite = {
-//                                    viewModel.toggleFavorite(recipe.id, !recipe.isFavorite)
-//                                },
-//                                navController = navController,
-//                                onDelete = { viewModel.deleteRecipe(recipe.id) },
-//                                onEdit = { navController.navigate("addEditRecipe/${recipe.id}") },
-//                            )
-//                        }
-//                        // 🔹 Внизу выводим популярные
-//                        item {
-//                            PopularRecipesSection(
-//                                recipes = recipes.take(3), // первые 3 как популярные
-//                                navController = navController,
-//                                viewModel = viewModel
-//                            )
-//                        }
-//                    }
-//                }
-//                else -> {
-//                    StartSearchContent(
-//                        suggestions = listOf("Рыба", "Быстро", "Десерт", "Овощи"),
-//                        onSuggestionClick = { query = it }
-//                    )
-//                }
-//            }
             when {
                 query.isBlank() -> {
                     // стартовый экран поиска
@@ -555,8 +217,21 @@ fun SearchScreen(
                     )
                     Spacer(Modifier.height(16.dp))
 
+                    val listState = rememberLazyListState()
+
+                    LaunchedEffect(listState.isScrollInProgress) {
+                        if (listState.isScrollInProgress) {
+                            scrollHandler.handleLazyListScroll(listState)
+                        }
+                    }
+
+                    LaunchedEffect(listState.firstVisibleItemIndex) {
+                        scrollHandler.handleLazyListScroll(listState)
+                    }
+
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize().background(color = MaterialTheme.colorScheme.background)
+                        modifier = Modifier.fillMaxSize().background(color = MaterialTheme.colorScheme.background),
+                        state = listState
                     ) {
                         itemsIndexed(filteredRecipes) { index, recipe ->
                             Surface(
