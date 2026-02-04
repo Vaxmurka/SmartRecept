@@ -2,13 +2,8 @@
 package com.example.smartrecept.ui.screens
 
 import android.app.Application
-import android.content.Context
-import android.net.Uri
-import android.os.Environment
 import android.util.Log
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,20 +11,15 @@ import androidx.navigation.NavHostController
 import com.example.smartrecept.data.recipes.DatasourceRecipes
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.ui.components.ExportIO
-import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
 
 enum class SearchMode { AND, OR }
 

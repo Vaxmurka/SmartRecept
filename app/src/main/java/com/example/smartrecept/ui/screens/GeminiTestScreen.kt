@@ -16,7 +16,6 @@ import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.PublicPreviewAPI
 import kotlinx.coroutines.launch
 
-@OptIn(PublicPreviewAPI::class)
 @Composable
 fun GeminiTestScreen(
     navController: NavController
@@ -95,7 +94,6 @@ fun GeminiTestScreen(
     }
 }
 
-@OptIn(PublicPreviewAPI::class)
 suspend fun askGemini(prompt: String): String {
     return try {
         val model = Firebase.ai(backend = GenerativeBackend.googleAI())

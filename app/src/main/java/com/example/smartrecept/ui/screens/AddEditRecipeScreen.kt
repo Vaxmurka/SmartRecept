@@ -6,7 +6,6 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -71,7 +70,6 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.smartrecept.data.recipes.RecipeStep
 import com.example.smartrecept.filterChipsList
-import okhttp3.MediaType.Companion.toMediaType
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -319,8 +317,36 @@ fun AddEditRecipeScreen(
 
             Spacer(Modifier.height(24.dp))
 
+            val recipes = viewModel.recipes.collectAsState().value
+            val allTags = remember(recipes) {
+                // Считаем частоту использования каждого тега
+                val tagFrequency = mutableMapOf<String, Int>()
+
+                recipes.forEach { recipe ->
+                    recipe.tags
+                        .filter { it.isNotBlank() }
+                        .forEach { tag ->
+                            tagFrequency[tag] = tagFrequency.getOrDefault(tag, 0) + 1
+                        }
+                }
+
+                // Сортируем по частоте использования (по убыванию)
+                val popularTags = tagFrequency
+                    .toList()
+                    .sortedByDescending { (_, count) -> count }
+                    .take(10) // Берем топ-10 самых популярных
+                    .map { (tag, _) -> tag }
+
+                // Добавляем стандартные теги, если их нет в популярных
+                val defaultTags = filterChipsList
+                val combinedTags = (defaultTags + popularTags).distinct()
+
+                // Можем перемешать или выбрать определенное количество
+                combinedTags.take(15) // Ограничиваем общее количество
+            }
+
             TagsInputField(
-                allTags = filterChipsList,
+                allTags = allTags,
                 selectedTags = selectedTags,
                 onTagsChanged = { selectedTags = it }
             )

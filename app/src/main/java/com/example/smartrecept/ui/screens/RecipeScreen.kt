@@ -4,7 +4,6 @@
 package com.example.smartrecept.ui.screens
 
 import RecipeViewModelFactory
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -14,32 +13,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.app.Application
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.data.settings.UserPreferencesRepository
-import com.example.smartrecept.getSystemTheme
 import com.example.smartrecept.ui.components.CollapsibleCard
 import com.example.smartrecept.ui.components.CustomCard
 
@@ -191,26 +182,6 @@ private fun RecipeDetailContent(
                                 width = 1.dp,
                             )
                         )
-//                        AssistChip(
-//                            onClick = {},
-//                            label = {
-//                                Icon(
-//                                    Icons.Default.PeopleAlt,
-//                                    contentDescription = null,
-//                                    modifier = Modifier.size(16.dp),
-//                                    tint = MaterialTheme.colorScheme.onTertiary
-//                                )
-//                                Spacer(Modifier.width(8.dp))
-//                                Text("${recipe.servings} $servingsStr", color = MaterialTheme.colorScheme.onTertiary)
-//                            },
-//                            colors = AssistChipDefaults.assistChipColors(
-//                                containerColor = MaterialTheme.colorScheme.tertiary
-//                            ),
-//                            border = BorderStroke(
-//                                color = Color.Transparent,
-//                                width = 1.dp,
-//                            )
-//                        )
 
                         fun calcServings(count: Int): String {
                             return when(count) {
@@ -435,7 +406,6 @@ private fun RecipeDetailContent(
                 ) {
                     Text("Начать готовить")
                 }
-//                Button(onClick = {}, modifier = Modifier.weight(1f)) {}
             }
 
             Spacer(Modifier.height(20.dp))

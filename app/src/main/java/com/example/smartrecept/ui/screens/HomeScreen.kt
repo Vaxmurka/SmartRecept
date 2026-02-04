@@ -19,22 +19,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferences
+import com.example.smartrecept.filterChipsList
 import com.example.smartrecept.ui.components.CustomCard
 import com.example.smartrecept.ui.components.CustomSearchPanel
 import com.example.smartrecept.ui.components.RecipeCard
 import com.example.smartrecept.ui.components.RecipeDayCard
-import com.example.smartrecept.ui.components.navigateSingleTopTo
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
@@ -139,6 +136,33 @@ fun HomeScreenContent(
         }
     }
 
+    val allTags = remember(recipes) {
+        // Считаем частоту использования каждого тега
+        val tagFrequency = mutableMapOf<String, Int>()
+
+        recipes.forEach { recipe ->
+            recipe.tags
+                .filter { it.isNotBlank() }
+                .forEach { tag ->
+                    tagFrequency[tag] = tagFrequency.getOrDefault(tag, 0) + 1
+                }
+        }
+
+        // Сортируем по частоте использования (по убыванию)
+        val popularTags = tagFrequency
+            .toList()
+            .sortedByDescending { (_, count) -> count }
+            .take(10) // Берем топ-10 самых популярных
+            .map { (tag, _) -> tag }
+
+        // Добавляем стандартные теги, если их нет в популярных
+        val defaultTags = filterChipsList
+        val combinedTags = (defaultTags + popularTags).distinct()
+
+        // Можем перемешать или выбрать определенное количество
+        combinedTags.take(15) // Ограничиваем общее количество
+    }
+
     val searchTerms = query
         .split(" ")
         .map { it.trim() }
@@ -184,7 +208,8 @@ fun HomeScreenContent(
                     recipes = recipes,
                     selectedFilter = selectedFilter,
                     navController = navController,
-                    onFilterChange = { selectedFilter = it }
+                    onFilterChange = { selectedFilter = it },
+                    allTags = allTags
                 )
             }
         }
@@ -229,7 +254,8 @@ fun RecipeInDay(
     navController: NavHostController,
     recipes: List<Recipe>,
     selectedFilter: String?,
-    onFilterChange: (String?) -> Unit
+    onFilterChange: (String?) -> Unit,
+    allTags: List<String>
 ) {
     val recipeDay by viewModel.recipeOfTheDay
     val isRefreshing by viewModel.isRefreshing
@@ -254,7 +280,7 @@ fun RecipeInDay(
         }
     ) {
         Column(Modifier.fillMaxWidth()) {
-            FilterChips(selectedFilter, onFilterChange)
+            FilterChips(selectedFilter, onFilterChange, allTags)
             recipeDay?.let { recipe ->
                 RecipeDayCard(recipe = recipe, navController = navController)
             } ?: Text("Нет доступных рецептов", modifier = Modifier.padding(16.dp))
