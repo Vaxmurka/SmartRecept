@@ -23,6 +23,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.view.WindowManager
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
@@ -50,6 +51,7 @@ import rememberScrollHandler
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+//        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         // Улучшаем производительность анимаций
         window.setFlags(

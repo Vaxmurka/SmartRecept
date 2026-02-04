@@ -890,44 +890,49 @@ suspend fun askGemini(prompt: String): String {
             .generativeModel("gemini-2.5-flash")
 
         val strictPrompt = """
-            ТВОЯ ЗАДАЧА: ВЕРНУТЬ ТОЛЬКО JSON БЕЗ ЛЮБЫХ ДРУГИХ СЛОВ, ОБЪЯСНЕНИЙ ИЛИ MARKDOWN.
+            ТВОЯ ЗАДАЧА: Создать рецепт и добавить РЕАЛЬНУЮ ССЫЛКУ НА ИЗОБРАЖЕНИЕ из TheMealDB API.
             
             $prompt
             
-            СТРОГОЕ ТРЕБОВАНИЕ:
-            1. Начни ответ сразу с фигурной скобки "{"
-            2. Закончи ответ фигурной скобкой "}"
-            3. Не добавляй никаких комментариев, примечаний, объяснений
-            4. Не используй markdown (```json, ```)
-            5. Ответ должен быть В ТОЧНОСТИ в этом формате:
+            ДЛЯ ПОЛУЧЕНИЯ ИЗОБРАЖЕНИЯ ИСПОЛЬЗУЙ ЭТУ ССЫЛКУ:
+            Если рецепт похож на одно из этих блюд, используй соответствующую ссылку:
             
+            • Омлет, яичница → https://www.themealdb.com/images/media/meals/ysxwuq1487323065.jpg
+            • Паста, спагетти → https://www.themealdb.com/images/media/meals/sutysw1468247559.jpg
+            • Пицца → https://www.themealdb.com/images/media/meals/x0lk931587671540.jpg
+            • Бургер → https://www.themealdb.com/images/media/meals/urzj1d1587670726.jpg
+            • Суп → https://www.themealdb.com/images/media/meals/1529445434.jpg
+            • Салат → https://www.themealdb.com/images/media/meals/1549542877.jpg
+            • Торт, десерт → https://www.themealdb.com/images/media/meals/yypvst1511386427.jpg
+            • Курица → https://www.themealdb.com/images/media/meals/wvpsxx1468256321.jpg
+            • Рыба → https://www.themealdb.com/images/media/meals/uwxusv1487344500.jpg
+            • Рис → https://www.themealdb.com/images/media/meals/1520081754.jpg
+            
+            Если блюдо не подходит под эти категории, используй дефолтное изображение:
+            https://www.themealdb.com/images/media/meals/1529446352.jpg
+            
+            ФОРМАТ ОТВЕТА ТОЛЬКО JSON:
             {
-                "airecipe_name": "Название рецепта здесь",
-                "ingredients": ["ингредиент 1", "ингредиент 2", "ингредиент 3"],
-                "tags": ["тег1", "тег2", "тег3"],
+                "airecipe_name": "Название рецепта",
+                "ingredients": ["ингредиент1", "ингредиент2"],
+                "tags": ["основной_тег", "дополнительный_тег"],
                 "time": "30",
                 "servings": 2,
-                "steps": ["Шаг 1: сделай это", "Шаг 2: потом это"],
-                "notes": ["Заметка 1", "Заметка 2"],
-                "image_url": "https://real-website.com/real-photo-of-dish.jpg"
+                "steps": ["Шаг 1", "Шаг 2"],
+                "notes": ["Заметка"],
+                "image_url": "СЮДА ВСТАВЬ ОДНУ ИЗ ССЫЛОК ВЫШЕ"
             }
             
-            ОБРАТИ ВНИМАНИЕ на image_url:
-            - Это должна быть РЕАЛЬНАЯ рабочая ссылка на фото
-            - Фото должно быть в формате JPG или PNG
-            - Ссылка должна начинаться с https://
-            - Фото должно соответствовать рецепту
-            
-            Пример правильного ответа:
+            ПРИМЕР:
             {
                 "airecipe_name": "Классический омлет",
-                "ingredients": ["3 яйца", "100 мл молока", "соль", "перец", "1 ст.л. растительного масла"],
-                "tags": ["завтрак", "быстро", "просто"],
+                "ingredients": ["3 яйца", "100 мл молока", "соль", "перец"],
+                "tags": ["омлет", "завтрак", "быстро"],
                 "time": "10",
                 "servings": 2,
-                "steps": ["Взбейте яйца с молоком", "Добавьте соль и перец", "Жарьте на сковороде 5-7 минут"],
-                "notes": ["Подавайте горячим", "Можно добавить зелень"],
-                "image_url": "https://img.povar.ru/uploads/0f/d2/e3/3a/omlet_klassicheskii-868901.JPG"
+                "steps": ["Взбейте яйца с молоком", "Жарьте на сковороде"],
+                "notes": ["Подавайте горячим"],
+                "image_url": "https://www.themealdb.com/images/media/meals/ysxwuq1487323065.jpg"
             }
         """.trimIndent()
 

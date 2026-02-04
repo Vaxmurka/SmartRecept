@@ -233,6 +233,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.smartrecept.Screen
 import com.example.smartrecept.bottomNavItems
@@ -245,6 +246,7 @@ fun CustomBottomNavigation(
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
 
     AnimatedVisibility(
         visible = scrollHandler.isBottomBarVisible,
@@ -292,7 +294,25 @@ fun CustomBottomNavigation(
                             else -> screen.icon
                         }
 
-                        IconButton(onClick = { navigateToScreen(navController, screen) }) {
+                        IconButton(
+                            onClick = {
+                                // Не навигируем если уже на этом экране
+                                if (currentRoute == screen.route) return@IconButton
+
+                                navController.navigate(screen.route) {
+                                    if (screen.route == Screen.Home.route) {
+                                        // Для Home очищаем стек
+                                        popUpTo(0) {
+                                            saveState = true
+                                        }
+                                    } else {
+                                        // Для других экранов
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            }
+                        ) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = screen.title,
@@ -308,7 +328,13 @@ fun CustomBottomNavigation(
 
             // Центральная плавающая кнопка (AI)
             FloatingActionButton(
-                onClick = { navigateToScreen(navController, Screen.AIAssistant) },
+                onClick = {
+                    if (currentRoute == Screen.AIAssistant.route) return@FloatingActionButton
+                    navController.navigate(Screen.AIAssistant.route) {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
@@ -331,6 +357,24 @@ fun CustomBottomNavigation(
     }
 }
 
+fun NavHostController.navigateSingleTopTo(route: String, currentRoute: String?) {
+    // Если уже на этом экране, ничего не делаем
+    if (currentRoute == route) return
+
+    this.navigate(route) {
+        // Для Home очищаем стек
+        if (route == "home" || route == Screen.Home.route) {
+            popUpTo(0) {
+                saveState = true
+            }
+        } else {
+            // Для других экранов
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+}
+
 private fun navigateToScreen(navController: NavController, screen: Screen) {
     navController.navigate(screen.route) {
         popUpTo(navController.graph.startDestinationId) {
@@ -340,3 +384,26 @@ private fun navigateToScreen(navController: NavController, screen: Screen) {
         restoreState = true
     }
 }
+
+//@Composable
+//private fun navigateToScreen(navController: NavController, screen: Screen) {
+//    val navBackStackEntry by navController.currentBackStackEntryAsState()
+//    val currentRoute = navBackStackEntry?.destination?.route
+//
+//    // Если уже на этом экране, выходим
+//    if (currentRoute == screen.route) return
+//
+//    // Если пытаемся перейти на Home, а сейчас не на Search
+//    if (screen.route == Screen.Home.route && currentRoute != Screen.Search.route) {
+//        navController.navigate(screen.route) {
+//            popUpTo(0) // Очищаем весь стек
+//            launchSingleTop = true
+//        }
+//    } else {
+//        // Для всех остальных случаев
+//        navController.navigate(screen.route) {
+//            launchSingleTop = true
+//            restoreState = true
+//        }
+//    }
+//}

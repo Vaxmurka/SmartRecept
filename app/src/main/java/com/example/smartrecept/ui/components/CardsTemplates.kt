@@ -39,11 +39,20 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.example.smartrecept.data.recipes.Recipe
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import com.example.smartrecept.Screen
 import kotlin.math.abs
@@ -262,13 +271,17 @@ fun CustomSearchPanel(
     navController: NavHostController,
     selectedFilter: String?,
     onFilterChange: (String?) -> Unit,
+    onClickSearch: () -> Unit = { navController.navigate("search") },
     modifier: Modifier = Modifier
 ) {
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 8.dp)
-            .heightIn(min = 56.dp),  // Минимальная высота для выравнивания
+            .heightIn(min = 56.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Кастомизированное поле поиска
@@ -276,9 +289,9 @@ fun CustomSearchPanel(
             modifier = Modifier
                 .weight(1f)
                 .padding(end = 8.dp)
-                .height(50.dp)  // Фиксированная высота для TextField
-                .clip(MaterialTheme.shapes.medium)  // Скругление углов
-                .background(MaterialTheme.colorScheme.surfaceVariant)  // Фон
+                .height(50.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .align(Alignment.CenterVertically)
         ) {
             TextField(
@@ -304,7 +317,19 @@ fun CustomSearchPanel(
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxSize()
-                    .clickable { if (readOnly) navController.navigate("search") }
+                    .clickable {
+                        println("-------------------------------------------------------")
+                        if (readOnly) {
+                            onClickSearch()
+                        }
+                    }
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { focusState ->
+                        if (readOnly && focusState.isFocused) {
+                            focusManager.clearFocus()
+                            onClickSearch()
+                        }
+                    }
             )
         }
 

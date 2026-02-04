@@ -4,6 +4,7 @@ package com.example.smartrecept.ui.screens
 import RecipeViewModelFactory
 import ScrollHandler
 import android.app.Application
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,6 +34,7 @@ import com.example.smartrecept.ui.components.CustomCard
 import com.example.smartrecept.ui.components.CustomSearchPanel
 import com.example.smartrecept.ui.components.RecipeCard
 import com.example.smartrecept.ui.components.RecipeDayCard
+import com.example.smartrecept.ui.components.navigateSingleTopTo
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
@@ -56,6 +58,7 @@ fun HomeScreen(
         }
     } else {
         Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             floatingActionButton = {
                 Box(
                     modifier = Modifier
@@ -65,11 +68,11 @@ fun HomeScreen(
                         onClick = { navController.navigate("addEditRecipe/${0}") },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp), // 💧 форма капли сбоку
+                        shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp),
                         modifier = Modifier
-                            .align(Alignment.CenterEnd) // по центру справа
-                            .offset(x = (20).dp) // немного сдвинуть от края
-                            .size(width = 60.dp, height = 80.dp) // продолговатая форма
+                            .align(Alignment.CenterEnd)
+                            .offset(x = (20).dp)
+                            .size(width = 60.dp, height = 80.dp)
                             .graphicsLayer {
                                 shadowElevation = 10.dp.toPx()
                                 shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp)
@@ -126,6 +129,16 @@ fun HomeScreenContent(
     var query by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf<String?>(null) }
 
+    // Добавляем обработчик для клика по поиску
+    val onClickSearch = {
+        Log.d("HomeScreen", "Search clicked, navigating...")
+        println("Search clicked, navigating...")
+        navController.navigate("search") {
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     val searchTerms = query
         .split(" ")
         .map { it.trim() }
@@ -152,10 +165,11 @@ fun HomeScreenContent(
                 CustomSearchPanel(
                     query = query,
                     readOnly = true,
-                    onQueryChange = { /*query = it*/ },
+                    onQueryChange = { query = it },
                     navController = navController,
                     selectedFilter = selectedFilter,
-                    onFilterChange = { selectedFilter = it }
+                    onFilterChange = { selectedFilter = it },
+                    onClickSearch = onClickSearch
                 )
             }
         }
