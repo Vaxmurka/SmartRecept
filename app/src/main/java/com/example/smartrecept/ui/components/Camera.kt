@@ -16,9 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.example.smartrecept.R
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -47,6 +49,8 @@ fun CameraScreen(
 
     var hasCameraPermission by remember { mutableStateOf(false) }
     val cameraPermissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
+    val cameraBindingFailedMessage = stringResource(R.string.camera_binding_failed)
+    val takePhotoText = stringResource(R.string.take_photo)
 
     LaunchedEffect(cameraPermissionState.status) {
         if (cameraPermissionState.status.isGranted) {
@@ -81,7 +85,7 @@ fun CameraScreen(
                             onError(
                                 ImageCaptureException(
                                     ImageCapture.ERROR_UNKNOWN,
-                                    "Camera binding failed",
+                                    cameraBindingFailedMessage,
                                     e
                                 )
                             )
@@ -93,7 +97,7 @@ fun CameraScreen(
             )
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Разрешение на камеру не предоставлено")
+                Text(stringResource(R.string.camera_permission_denied))
             }
         }
 
@@ -125,7 +129,11 @@ fun CameraScreen(
                         )
                     }
                 ) {
-                    Icon(Icons.Default.CameraAlt, "Take photo", modifier = Modifier.size(36.dp))
+                    Icon(
+                        Icons.Default.CameraAlt,
+                        stringResource(R.string.take_photo),
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
             Spacer(Modifier.height(36.dp))

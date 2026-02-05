@@ -1,3 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Общие строки -->
     <string name="app_name">SmartRecept</string>
+    <string name="search">Поиск</string>
+    <string name="search_hint">Поиск...</string>
+    <string name="favorites">Избранное</string>
+    <string name="settings">Настройки</string>
+    <string name="home">Главная</string>
+    <string name="journal">Журнал</string>
+
+    <!-- Экраны -->
+    <string name="title_home">Главная</string>
+    <string name="title_search">Поиск рецептов</string>
+    <string name="title_favorites">Избранное</string>
+    <string name="title_journal">Журнал</string>
+    <string name="title_settings">Настройки</string>
+
+    <!-- Действия -->
+    <string name="add_recipe">Добавить рецепт</string>
+    <string name="edit_recipe">Редактировать рецепт</string>
+    <string name="delete_recipe">Удалить рецепт</string>
+    <string name="delete">Удалить</string>
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="back">Назад</string>
+    <string name="add">Добавить</string>
+    <string name="clear">Очистить</string>
+    <string name="clear_favourite">Очистить избранное</string>
+
+    <!-- Рецепт -->
+    <string name="recipe_title">Название</string>
+    <string name="recipe_ingredients">Ингредиенты</string>
+    <string name="recipe_steps">Шаги приготовления</string>
+    <string name="recipe_time">Время</string>
+    <string name="recipe_tags">Теги</string>
+
+    <!-- Фильтры -->
+    <string name="filter">Фильтр</string>
+    <string name="filter_favorites">Только избранное</string>
+    <string name="filter_cooked">Только приготовленные</string>
+    <string name="filter_time">Время приготовления</string>
+    <string name="filter_apply">Применить</string>
+    <string name="filter_reset">Сбросить</string>
+
+    <!-- Сообщения -->
+    <string name="no_recipes">Нет рецептов</string>
+    <string name="no_search_results">Ничего не найдено</string>
+    <string name="try_search">Попробуйте поискать:</string>
+    <string name="you_are_sure_clear_favourite">Вы уверены, что хотите удалить все рецепты из избранного?</string>
+
+    <!-- Настройки -->
+    <string name="settings_language">Язык</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_scale">Масштаб</string>
+    <string name="settings_notifications">Уведомления</string>
+    <string name="settings_clear_database">Очистить базу данных</string>
+    <string name="settings_question_clear_database">Вы уверены, что хотите стереть все данные?</string>
+    <string name="settings_choose_format_export">Выберите формат экспорта</string>
+    <string name="settings_question_choose_format_export">В каком формате вы хотите экспортировать данные?</string>
+
+    <!-- База данных -->
+    <string name="bd_title_remote">Управление базой данных</string>
+    <string name="bd_clear_data">Очистка данных</string>
+    <string name="bd_remote">Управление содержимым базы данных</string>
+    <string name="bd_delete_favourite_data">Удалить избранное</string>
+    <string name="bd_delete_allRecipe_data">Удалить все рецепты</string>
+
+    <string name="bd_import_export_title">Импорт/Экспорт</string>
+    <string name="bd_work_external_data">Работа с внешними данными</string>
+    <string name="bd_export">Экспорт данных</string>
+    <string name="bd_import">Импорт данных</string>
+    <string name="bd_templates">Шаблоны</string>
+    <string name="bd_choose_file_format_import">Выберите файл .json или .csv для импорта ваших рецептов.</string>
+    <string name="bd_choose_file_import">Выбрать файл для импорта</string>
+    <string name="import_success">Импорт успешно завершен</string>
+    <string name="import_failed">Ошибка импорта</string>
+    <string name="import_mess_text">%s импорт: %s</string>
+    <string name="import_templates">Шаблоны для импорта</string>
+    <string name="json_format">JSON формат:</string>
+    <string name="csv_format">CSV формат:</string>
+    <string name="export_recipes">Экспорт рецептов</string>
+    <string name="save_file">Сохранить файл</string>
+    <string name="file_complete_to_work">"Файл готов к сохранению: %s</string>
+    <string name="err_export">Ошибка при экспорте: %s</string>
+
+    <!-- Exception -->
+    <string name="exept_err_read_file">Ошибка чтения файла: %s</string>
+    <string name="exept_unsupported_file_format">Неподдерживаемый формат файла. Выбран файл: %s</string>
+
+    <!-- Создание/изменение рецепта -->
+    <string name="recipe_title_hint">Название рецепта</string>
+    <string name="recipe_title_placeholder">Паста карбонара</string>
+    <string name="servings_title">Порции</string>
+    <string name="minutes_short">мин</string>
+    <string name="new_ingredient">Новый ингредиент</string>
+    <string name="new_step">Новый шаг</string>
+    <string name="categories">Категории</string>
+    <string name="new_tag_hint">Новый тег</string>
+    <string name="add_custom_tag">Добавить свой тег</string>
+    <string name="write_something">Напишите что-нибудь...</string>
+    <string name="describe_step">Опишите этот шаг приготовления...</string>
+    <string name="camera_not_available">Камера недоступна без разрешения</string>
+    <string name="add_photo">Добавить фото</string>
+    <string name="change_photo">Изменить фото</string>
+    <string name="delete_step">Удалить шаг</string>
+    <string name="add_photo_title">Добавить фото</string>
+    <string name="camera">Камера</string>
+    <string name="gallery">Галерея</string>
+    <string name="paste_link">Вставить ссылку</string>
+    <string name="insert_link_title">Вставить ссылку на изображение</string>
+    <string name="link_placeholder">https://example.com/photo.png</string>
+    <string name="add_tag">Добавить</string>
+
+    <!-- CoockingScreen -->
+    <string name="ingredients_title">Ингредиенты</string>
+    <string name="notes_title">Заметки</string>
+    <string name="finish_cooking_title">Завершить готовку</string>
+    <string name="cooking_notes_prompt">Если у вас появились замечания, оставьте их ниже:</string>
+    <string name="cooking_notes_placeholder">Мои заметки о готовке...</string>
+    <string name="keep_previous_notes">Сохранить предыдущие записи</string>
+    <string name="finish_button">Завершить</string>
+    <string name="step_counter">Шаг %d/%d</string>
+    <string name="step_image_description">Шаг %d</string>
+    <string name="previous_step">Предыдущий шаг</string>
+    <string name="next_step">Следующий шаг</string>
+    <string name="timer_icon_description">Таймер</string>
+    <string name="timer_running">Таймер запущен</string>
+    <string name="timer_start_prompt">Нажмите для запуска</string>
+
+    <!-- FavouriteScreen -->
+    <string name="favorites_title">Избранное</string>
+    <string name="no_favorites_message">Пока нет избранных рецептов</string>
+
+    <!-- JournalScreen -->
+    <string name="cooked_recipes_title">Приготовленные рецепты</string>
+    <string name="no_cooked_recipes_message">Пока нет приготовленных рецептов</string>
+
+    <!-- SearchScreen -->
+    <string name="filters">Фильтры</string>
+    <string name="remove_filter">Убрать фильтр</string>
+    <string name="up_to_minutes">До %d мин</string>
+    <string name="and_mode">Режим И</string>
+    <string name="try_searching">Попробуйте поискать:</string>
+    <string name="search_suggestion_1">Паста</string>
+    <string name="search_suggestion_2">Суп</string>
+    <string name="search_suggestion_3">Курица</string>
+    <string name="search_suggestion_4">Салат</string>
+    <string name="search_suggestion_5">Десерт</string>
+    <string name="search_suggestion_6">Быстро</string>
+    <string name="popular_tags">Популярные теги:</string>
+    <string name="recipes_found">Найдено рецептов: %d</string>
+    <string name="nothing_found">Ничего не найдено</string>
+    <string name="try_changing_query">Попробуйте изменить запрос или фильтры</string>
+    <string name="configure_filters">Настроить фильтры</string>
+    <string name="popular">Популярное</string>
+
+    <!-- RecipeScreen -->
+    <string name="error">Ошибка</string>
+    <string name="error_loading_recipe">Ошибка загрузки рецепта</string>
+    <string name="toggle_favorite">Добавить в избранное</string>
+    <string name="minutes_format">%s мин</string>
+    <string name="servings_format">%d порц.</string>
+    <string name="select_servings">Выбрать порции</string>
+    <string name="current_servings">%d порц. (текущее)</string>
+    <string name="portions_format">%d порц.</string>
+    <string name="edit">Редактировать</string>
+    <string name="already_cooked_experience">Опыт в приготовлении уже есть</string>
+    <string name="first_time_cooking">Будем делать впервые</string>
+    <string name="toggle_cooked">Отметить приготовленным</string>
+    <string name="cooking_method_title">Способ приготовления</string>
+    <string name="start_cooking">Начать готовить</string>
+
+    <!-- HomeScreen -->
+    <string name="no_recipes_match_filters">Нет рецептов, соответствующих выбранным фильтрам</string>
+    <string name="no_available_recipes">Нет доступных рецептов</string>
+
+    <!-- FilterBottomSheet  -->
+    <string name="filters_title">Фильтры</string>
+    <string name="close">Закрыть</string>
+    <string name="search_mode">Режим поиска</string>
+    <string name="or_mode">ИЛИ</string>
+    <string name="tags_title">Теги</string>
+    <string name="additional_filters">Дополнительно</string>
+    <string name="only_favorites">Только избранное</string>
+    <string name="only_cooked">Только приготовленные</string>
+    <string name="cooking_time_filter">Время приготовления</string>
+    <string name="any_time">Любое время</string>
+    <string name="reset">Сбросить</string>
+    <string name="apply">Применить</string>
+
+    <!-- Camera -->
+    <string name="camera_binding_failed">Не удалось подключить камеру</string>
+    <string name="camera_permission_denied">Разрешение на камеру не предоставлено</string>
+    <string name="take_photo">Сделать фото</string>
+
+    <!-- CardsTemplates -->
+    <string name="remove_from_cooked">Удалить из приготовленных</string>
+    <string name="mark_as_cooked">Готовил</string>
+    <string name="remove_from_favorites">Удалить из избранного</string>
+    <string name="add_to_favorites">Добавить в избранное</string>
+    <string name="delete_recipe_confirmation">Удалить рецепт?</string>
+    <string name="delete_recipe_confirm_message">Вы уверены, что хотите удалить этот рецепт?</string>
+    <string name="expand">Развернуть</string>
+    <string name="collapse">Свернуть</string>
+
+    <string name="recipe_image">Изображение рецепта</string>
+    <string name="step_image">Изображение шага %d</string>
+
 </resources>

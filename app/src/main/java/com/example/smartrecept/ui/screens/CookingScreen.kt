@@ -47,11 +47,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.example.smartrecept.R
 import com.example.smartrecept.data.recipes.CookingStep
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.recipes.toEnhancedCookingSteps
@@ -90,7 +92,6 @@ fun CookingScreen(
             )
         }
     }
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,7 +118,7 @@ fun CookingScreenContent(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {}
@@ -131,7 +132,7 @@ fun CookingScreenContent(
                 .background(color = MaterialTheme.colorScheme.background)
         ) {
             CollapsibleCard(
-                title = "Ингредиенты",
+                title = stringResource(R.string.ingredients_title),
                 initiallyExpanded = true
             ) {
                 Column {
@@ -147,7 +148,7 @@ fun CookingScreenContent(
             // Блок с заметками (изначально скрыт)
             if (recipe.notes.isNotEmpty()) {
                 CollapsibleCard(
-                    title = "Заметки",
+                    title = stringResource(R.string.notes_title),
                     initiallyExpanded = false,
                     outPadding = PaddingValues(bottom = 16.dp, top = 4.dp)
                 ) {
@@ -222,11 +223,10 @@ fun CookingStepScreen(
     if (showEndDialog) {
         AlertDialog(
             onDismissRequest = { showEndDialog = false },
-            title = { Text("Завершить готовку") },
+            title = { Text(stringResource(R.string.finish_cooking_title)) },
             text = {
                 Column {
                     if (recipe.notes.isNotEmpty()) {
-                        // Блок заметок с растягиванием на всю ширину
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -247,13 +247,13 @@ fun CookingStepScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    Text("Если у вас появились замечания, оставьте их ниже:")
+                    Text(stringResource(R.string.cooking_notes_prompt))
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = cookingNotes,
                         onValueChange = { cookingNotes = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Мои заметки о готовке...") },
+                        placeholder = { Text(stringResource(R.string.cooking_notes_placeholder)) },
                         singleLine = false,
                         maxLines = 4
                     )
@@ -270,7 +270,7 @@ fun CookingStepScreen(
                             onCheckedChange = { keepPreviousNotes = it }
                         )
                         Text(
-                            text = "Сохранить предыдущие записи",
+                            text = stringResource(R.string.keep_previous_notes),
                             modifier = Modifier.padding(start = 8.dp)
                         )
                     }
@@ -279,20 +279,20 @@ fun CookingStepScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onBack(cookingNotes, keepPreviousNotes) // Boolean -> флаг на созранение или удаление прошлых записей
+                        onBack(cookingNotes, keepPreviousNotes)
                         showEndDialog = false
-                        cookingNotes = "" // Очищаем поле
+                        cookingNotes = ""
                     }
                 ) {
-                    Text("Завершить")
+                    Text(stringResource(R.string.finish_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showEndDialog = false
-                    cookingNotes = "" // Очищаем поле при отмене
+                    cookingNotes = ""
                 }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -312,7 +312,7 @@ fun CookingStepScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Шаг ${currentStepIndex + 1}/${stepStateList.size}",
+                    text = stringResource(R.string.step_counter, currentStepIndex + 1, stepStateList.size),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -335,12 +335,12 @@ fun CookingStepScreen(
                     val model: Any = if (currentStep.imageUrl.startsWith("/")) {
                         Uri.fromFile(File(currentStep.imageUrl))
                     } else {
-                        currentStep.imageUrl // это может быть http(s) или content:// (для старых записей)
+                        currentStep.imageUrl
                     }
 
                     AsyncImage(
                         model = model,
-                        contentDescription = "Шаг ${currentStepIndex + 1}",
+                        contentDescription = stringResource(R.string.step_image_description, currentStepIndex + 1),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
@@ -386,7 +386,7 @@ fun CookingStepScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Предыдущий шаг")
+                    Text(stringResource(R.string.previous_step))
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -403,7 +403,8 @@ fun CookingStepScreen(
                 ) {
                     Text(
                         text = if (currentStepIndex == stepStateList.lastIndex)
-                            "Завершить" else "Следующий шаг"
+                            stringResource(R.string.finish_button)
+                        else stringResource(R.string.next_step)
                     )
                 }
             }
@@ -427,16 +428,14 @@ fun StepTimer(
     var remainingSeconds by remember { mutableIntStateOf(timerMinutes * 60) }
 
     LaunchedEffect(isTimerRunning, timerMinutes) {
-        // Сбрасываем таймер при изменении времени или шага
         remainingSeconds = timerMinutes * 60
 
-        // Запускаем/останавливаем отсчет
         if (isTimerRunning) {
             while (remainingSeconds > 0) {
                 delay(1000L)
                 remainingSeconds--
             }
-            onTimerToggle() // автоматически останавливаем по завершении
+            onTimerToggle()
         }
     }
 
@@ -453,7 +452,7 @@ fun StepTimer(
     ) {
         Icon(
             imageVector = if (isTimerRunning) Icons.Filled.Timer else Icons.Outlined.Timer,
-            contentDescription = "Таймер",
+            contentDescription = stringResource(R.string.timer_icon_description),
             tint = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
 
@@ -469,7 +468,9 @@ fun StepTimer(
         Spacer(modifier = Modifier.width(8.dp))
 
         Text(
-            text = if (isTimerRunning) "Таймер запущен" else "Нажмите для запуска",
+            text = if (isTimerRunning)
+                stringResource(R.string.timer_running)
+            else stringResource(R.string.timer_start_prompt),
             style = MaterialTheme.typography.bodyMedium
         )
     }

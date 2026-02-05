@@ -19,9 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.smartrecept.R
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferencesRepository
 import com.example.smartrecept.filterChipsList
@@ -139,7 +141,7 @@ fun SearchScreen(
             )
         },
         floatingActionButton = {
-            // Плавающая кнопка фильтров с бейджем (она будет видна только когда есть результаты поиска)
+            // Плавающая кнопка фильтров с бейджем
             if (query.isNotBlank() && filteredRecipes.isNotEmpty()) {
                 Box {
                     FloatingActionButton(
@@ -164,7 +166,7 @@ fun SearchScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FilterList,
-                                contentDescription = "Фильтры"
+                                contentDescription = stringResource(R.string.filters)
                             )
                         }
                     }
@@ -179,7 +181,7 @@ fun SearchScreen(
                     .padding(padding)
                     .fillMaxSize()
             ) {
-                // Показываем активные фильтры как чипсы (только когда есть активные фильтры)
+                // Показываем активные фильтры как чипсы
                 if (activeFiltersCount > 0) {
                     Row(
                         modifier = Modifier
@@ -197,7 +199,7 @@ fun SearchScreen(
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Убрать тег",
+                                        contentDescription = stringResource(R.string.remove_filter),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 },
@@ -212,11 +214,11 @@ fun SearchScreen(
                             InputChip(
                                 selected = true,
                                 onClick = { onlyFavorites = false },
-                                label = { Text("Избранное") },
+                                label = { Text(stringResource(R.string.favorites_title)) },
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Убрать фильтр",
+                                        contentDescription = stringResource(R.string.remove_filter),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -228,11 +230,11 @@ fun SearchScreen(
                             InputChip(
                                 selected = true,
                                 onClick = { onlyCooked = false },
-                                label = { Text("Приготовленные") },
+                                label = { Text(stringResource(R.string.cooked_recipes_title)) },
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Убрать фильтр",
+                                        contentDescription = stringResource(R.string.remove_filter),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -244,11 +246,11 @@ fun SearchScreen(
                             InputChip(
                                 selected = true,
                                 onClick = { maxTime = null },
-                                label = { Text("До $time мин") },
+                                label = { Text(stringResource(R.string.up_to_minutes, time)) },
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Убрать фильтр",
+                                        contentDescription = stringResource(R.string.remove_filter),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -260,11 +262,11 @@ fun SearchScreen(
                             InputChip(
                                 selected = true,
                                 onClick = { useAndLogic = false },
-                                label = { Text("Режим И") },
+                                label = { Text(stringResource(R.string.and_mode)) },
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Убрать фильтр",
+                                        contentDescription = stringResource(R.string.remove_filter),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -273,7 +275,6 @@ fun SearchScreen(
                     }
                 }
 
-                // ============ ВОТ СЮДА ВСТАВЛЯЕМ КОД ============
                 when {
                     query.isBlank() -> {
                         Column(
@@ -288,7 +289,7 @@ fun SearchScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "Попробуйте поискать:",
+                                    stringResource(R.string.try_searching),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -312,7 +313,7 @@ fun SearchScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.FilterList,
-                                            contentDescription = "Фильтры"
+                                            contentDescription = stringResource(R.string.filters)
                                         )
                                     }
                                 }
@@ -325,7 +326,15 @@ fun SearchScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.horizontalScroll(rememberScrollState())
                             ) {
-                                listOf("Паста", "Суп", "Курица", "Салат", "Десерт", "Быстро").forEach { suggestion ->
+                                val suggestions = listOf(
+                                    stringResource(R.string.search_suggestion_1),
+                                    stringResource(R.string.search_suggestion_2),
+                                    stringResource(R.string.search_suggestion_3),
+                                    stringResource(R.string.search_suggestion_4),
+                                    stringResource(R.string.search_suggestion_5),
+                                    stringResource(R.string.search_suggestion_6)
+                                )
+                                suggestions.forEach { suggestion ->
                                     AssistChip(
                                         onClick = { query = suggestion },
                                         label = { Text(suggestion) },
@@ -341,7 +350,7 @@ fun SearchScreen(
                             // Или покажем популярные теги как фильтры
                             if (allTags.isNotEmpty()) {
                                 Text(
-                                    "Популярные теги:",
+                                    stringResource(R.string.popular_tags),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(bottom = 8.dp)
@@ -371,7 +380,7 @@ fun SearchScreen(
                     filteredRecipes.isNotEmpty() -> {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Найдено рецептов: ${filteredRecipes.size}",
+                            text = stringResource(R.string.recipes_found, filteredRecipes.size),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
@@ -440,18 +449,18 @@ fun SearchScreen(
                         ) {
                             Icon(
                                 Icons.Default.SearchOff,
-                                contentDescription = "Ничего не найдено",
+                                contentDescription = stringResource(R.string.nothing_found),
                                 modifier = Modifier.size(64.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                "Ничего не найдено",
+                                stringResource(R.string.nothing_found),
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Попробуйте изменить запрос или фильтры",
+                                stringResource(R.string.try_changing_query),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -470,7 +479,7 @@ fun SearchScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text("Настроить фильтры")
+                                Text(stringResource(R.string.configure_filters))
                                 if (activeFiltersCount > 0) {
                                     Spacer(Modifier.width(4.dp))
                                     Badge {
@@ -522,7 +531,7 @@ fun PopularRecipesSection(
                 .fillMaxWidth()
         ) {
             Text(
-                "Популярное",
+                stringResource(R.string.popular),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )

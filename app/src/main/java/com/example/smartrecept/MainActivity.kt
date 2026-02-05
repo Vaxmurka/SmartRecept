@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import com.example.smartrecept.data.recipes.DatasourceRecipes
+import com.example.smartrecept.data.settings.LocaleUtils
 import com.example.smartrecept.ui.components.AIassistLogic
 import com.example.smartrecept.ui.components.CameraScreen
 import com.example.smartrecept.ui.components.CustomBottomNavigation
@@ -46,12 +47,32 @@ import com.example.smartrecept.ui.screens.RecipeDetailScreen
 import com.example.smartrecept.ui.theme.SmartReceptTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import rememberScrollHandler
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        // Создаём репозиторий НА БАЗОВОМ контексте
+        val repo = UserPreferencesRepository(newBase)
+
+        // Синхронно читаем язык (допустимо здесь)
+        val language = runBlocking {
+            repo.preferencesFlow
+                .map { it.language }
+                .first()
+        }
+
+        // Применяем локаль
+        val localizedContext = LocaleUtils.setAppLocale(newBase, language)
+
+        super.attachBaseContext(localizedContext)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-//        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         // Улучшаем производительность анимаций
         window.setFlags(
@@ -64,14 +85,18 @@ class MainActivity : ComponentActivity() {
             window.setDecorFitsSystemWindows(false)
         }
 
+        // Создаем репозиторий
+        val userPrefsRepo = UserPreferencesRepository(this)
+
         // Запускаем инициализацию БД в фоне
         CoroutineScope(Dispatchers.IO).launch {
             DatasourceRecipes(applicationContext).initializeDatabase()
         }
 
         setContent {
-            SmartReceptApp()
+            SmartReceptApp(userPrefsRepo = userPrefsRepo)
         }
+
     }
 }
 
@@ -104,9 +129,8 @@ fun getSystemTheme(context: Context): String {
 }
 
 @Composable
-fun SmartReceptApp() {
+fun SmartReceptApp(userPrefsRepo: UserPreferencesRepository) {
     val context = LocalContext.current
-    val userPrefsRepo = remember { UserPreferencesRepository(context) }
     val scrollHandler = rememberScrollHandler()
     val userPrefs by userPrefsRepo.preferencesFlow.collectAsState(initial = UserPreferences())
 
@@ -190,7 +214,11 @@ fun SmartReceptApp() {
                         Screen.Settings.route,
                         animationType = NavigationAnimation.HORIZONTAL
                     ) {
-                        SettingsScreen(repository = userPrefsRepo, scrollHandler = scrollHandler)
+                        SettingsScreen(
+                            repository = userPrefsRepo,
+                            navController = navController,
+                            scrollHandler = scrollHandler
+                        )
                     }
 
                     // Детали рецепта - вертикальная анимация

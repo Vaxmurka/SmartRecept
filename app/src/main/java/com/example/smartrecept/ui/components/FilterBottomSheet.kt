@@ -12,7 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.smartrecept.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +56,7 @@ fun FilterBottomSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Фильтры",
+                        text = stringResource(R.string.filters_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -65,7 +67,7 @@ fun FilterBottomSheet(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Закрыть"
+                            contentDescription = stringResource(R.string.close)
                         )
                     }
                 }
@@ -74,7 +76,7 @@ fun FilterBottomSheet(
 
                 // Переключатель логики поиска
                 Text(
-                    text = "Режим поиска",
+                    text = stringResource(R.string.search_mode),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -87,13 +89,13 @@ fun FilterBottomSheet(
                     FilterChip(
                         selected = !useAndLogic,
                         onClick = { onUseAndLogicChange(false) },
-                        label = { Text("ИЛИ") },
+                        label = { Text(stringResource(R.string.or_mode)) },
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
                         selected = useAndLogic,
                         onClick = { onUseAndLogicChange(true) },
-                        label = { Text("И") },
+                        label = { Text(stringResource(R.string.and_mode)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -102,7 +104,7 @@ fun FilterBottomSheet(
 
                 // Фильтр по тегам
                 Text(
-                    text = "Теги",
+                    text = stringResource(R.string.tags_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -136,7 +138,7 @@ fun FilterBottomSheet(
 
                 // Дополнительные фильтры
                 Text(
-                    text = "Дополнительно",
+                    text = stringResource(R.string.additional_filters),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -164,7 +166,7 @@ fun FilterBottomSheet(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Только избранное",
+                            text = stringResource(R.string.only_favorites),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
@@ -194,7 +196,7 @@ fun FilterBottomSheet(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Только приготовленные",
+                            text = stringResource(R.string.only_cooked),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
@@ -210,7 +212,7 @@ fun FilterBottomSheet(
 
                 // Фильтр по времени
                 Text(
-                    text = "Время приготовления",
+                    text = stringResource(R.string.cooking_time_filter),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -220,14 +222,16 @@ fun FilterBottomSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf(20, 40, 60, null).forEach { time ->
+                    val timeOptions = listOf(20, 40, 60, null)
+                    timeOptions.forEach { time ->
                         val isSelected = maxTime == time
                         FilterChip(
                             selected = isSelected,
                             onClick = { onMaxTimeChange(time) },
                             label = {
                                 Text(
-                                    time?.let { "До $it мин" } ?: "Любое время"
+                                    time?.let { stringResource(R.string.up_to_minutes, it) }
+                                        ?: stringResource(R.string.any_time)
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
@@ -257,7 +261,7 @@ fun FilterBottomSheet(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Сбросить")
+                        Text(stringResource(R.string.reset))
                     }
 
                     Button(
@@ -265,7 +269,7 @@ fun FilterBottomSheet(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Применить")
+                        Text(stringResource(R.string.apply))
                     }
                 }
 

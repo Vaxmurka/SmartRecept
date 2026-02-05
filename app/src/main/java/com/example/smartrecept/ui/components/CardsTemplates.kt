@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -37,11 +38,9 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.example.smartrecept.R
 import com.example.smartrecept.data.recipes.Recipe
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -50,13 +49,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import com.example.smartrecept.Screen
 import kotlin.math.abs
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -76,6 +72,20 @@ fun RecipeCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
+
+    // Сохраняем переведенные строки
+    val editText = stringResource(R.string.edit)
+    val toggleCookedText = if (recipe.isCooked)
+        stringResource(R.string.remove_from_cooked)
+    else stringResource(R.string.mark_as_cooked)
+    val toggleFavoriteText = if (recipe.isFavorite)
+        stringResource(R.string.remove_from_favorites)
+    else stringResource(R.string.add_to_favorites)
+    val deleteText = stringResource(R.string.delete)
+    val deleteConfirmTitle = stringResource(R.string.delete_recipe_confirmation)
+    val deleteConfirmMessage = stringResource(R.string.delete_recipe_confirm_message)
+    val deleteActionText = stringResource(R.string.delete)
+    val cancelText = stringResource(R.string.cancel)
 
     Box(
         modifier = modifier
@@ -122,7 +132,7 @@ fun RecipeCard(
 
                         tags.forEach { tag ->
                             AssistChip(
-                                onClick = {}, // без действия
+                                onClick = {},
                                 label = {
                                     Text(
                                         tag,
@@ -173,28 +183,28 @@ fun RecipeCard(
             }
         ) {
             DropdownMenuItem(
-                text = { Text("Редактировать") },
+                text = { Text(editText) },
                 onClick = {
                     isMenuVisible = false
                     onEdit(recipe)
                 }
             )
             DropdownMenuItem(
-                text = { Text(if (recipe.isCooked) "Удалить из приготовленных" else "Готовил") },
+                text = { Text(toggleCookedText) },
                 onClick = {
                     isMenuVisible = false
                     onCookedToggle(!recipe.isCooked)
                 }
             )
             DropdownMenuItem(
-                text = { Text(if (recipe.isFavorite) "Удалить из избранного" else "Добавить в избранное") },
+                text = { Text(toggleFavoriteText) },
                 onClick = {
                     isMenuVisible = false
                     onToggleFavorite()
                 }
             )
             DropdownMenuItem(
-                text = { Text("Удалить") },
+                text = { Text(deleteText) },
                 onClick = {
                     isMenuVisible = false
                     showDeleteDialog = true
@@ -220,16 +230,16 @@ fun RecipeCard(
                     onDelete(recipe)
                     showDeleteDialog = false
                 }) {
-                    Text("Удалить")
+                    Text(deleteActionText)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Отмена")
+                    Text(cancelText)
                 }
             },
-            title = { Text("Удалить рецепт?") },
-            text = { Text("Вы уверены, что хотите удалить этот рецепт?") }
+            title = { Text(deleteConfirmTitle) },
+            text = { Text(deleteConfirmMessage) }
         )
     }
 }
@@ -239,7 +249,7 @@ fun RecipeDayCard(recipe: Recipe, navController: NavHostController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { navController.navigate("recipe/${recipe.id}") }, // переход,
+            .clickable { navController.navigate("recipe/${recipe.id}") },
         contentAlignment = Alignment.BottomStart
     ) {
         AsyncImage(
@@ -277,6 +287,10 @@ fun CustomSearchPanel(
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
+    val searchHint = stringResource(R.string.search_hint)
+    val clearText = stringResource(R.string.clear)
+    val favoritesText = stringResource(R.string.favorites)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -297,13 +311,13 @@ fun CustomSearchPanel(
             TextField(
                 value = query,
                 onValueChange = onQueryChange,
-                placeholder = { Text("Поиск...") },
+                placeholder = { Text(searchHint) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 readOnly = readOnly,
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Очистить")
+                            Icon(Icons.Default.Close, contentDescription = clearText)
                         }
                     }
                 },
@@ -318,7 +332,6 @@ fun CustomSearchPanel(
                 singleLine = true,
                 modifier = Modifier.fillMaxSize()
                     .clickable {
-                        println("-------------------------------------------------------")
                         if (readOnly) {
                             onClickSearch()
                         }
@@ -337,12 +350,12 @@ fun CustomSearchPanel(
         IconButton(
             onClick = { navController.navigate(Screen.Favorites.route) },
             modifier = Modifier.size(50.dp)
-                .clip(MaterialTheme.shapes.medium)  // Скругление углов
-                .background(MaterialTheme.colorScheme.surfaceVariant)  // Фон
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Icon(
                 imageVector = Icons.Default.Favorite,
-                contentDescription = "Избранное",
+                contentDescription = favoritesText,
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -399,6 +412,9 @@ fun CollapsibleCard(
 ) {
     var isExpanded by remember { mutableStateOf(initiallyExpanded) }
 
+    val expandText = stringResource(R.string.expand)
+    val collapseText = stringResource(R.string.collapse)
+
     Card(
         modifier = modifier.fillMaxWidth().padding(outPadding),
         shape = shape,
@@ -433,7 +449,7 @@ fun CollapsibleCard(
 
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Свернуть" else "Развернуть",
+                    contentDescription = if (isExpanded) collapseText else expandText,
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
@@ -456,9 +472,9 @@ fun CollapsibleCard(
 
 fun getTagColor(tag: String): Color {
     val hash = tag.hashCode()
-    val hue = (hash % 360).toFloat() // от 0 до 360 градусов по кругу
-    val saturation = 0.2f            // пастельность
-    val value = 0.7f                 // яркость
+    val hue = (hash % 360).toFloat()
+    val saturation = 0.2f
+    val value = 0.7f
 
     val c = value * saturation
     val x = c * (1 - abs((hue / 60f) % 2 - 1))

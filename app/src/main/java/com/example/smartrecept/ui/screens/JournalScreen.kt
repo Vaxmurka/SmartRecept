@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -24,10 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.smartrecept.R
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferencesRepository
 import com.example.smartrecept.ui.components.CustomCard
@@ -55,7 +58,7 @@ fun JournalScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Приготовленные рецепты",
+                            text = stringResource(R.string.cooked_recipes_title),
                             modifier = Modifier.fillMaxWidth().padding(end = 20.dp),
                             textAlign = TextAlign.Center,
                         )
@@ -74,9 +77,7 @@ fun JournalScreen(
                 },
             )
         }
-
     }
-
 }
 
 @Composable
@@ -87,7 +88,12 @@ fun JournalScreenContent(
     onUpdateFavorite: (Int, Boolean) -> Unit,
     viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)),
 ) {
-    Box(Modifier.fillMaxSize().padding(top = 56.dp), contentAlignment = Alignment.TopCenter) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(top = 56.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
         CustomCard(
             shape = RoundedCornerShape(bottomEnd = 28.dp, bottomStart = 28.dp),
             boxPadding = PaddingValues(vertical = 16.dp),
@@ -127,6 +133,24 @@ fun JournalScreenContent(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                         )
+                    }
+                }
+
+                // Показываем сообщение, если журнал пустой
+                if (recipes.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.no_cooked_recipes_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                 }
             }

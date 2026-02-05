@@ -3,6 +3,7 @@ package com.example.smartrecept.ui.screens
 
 import RecipeViewModelFactory
 import ScrollHandler
+import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.provider.OpenableColumns
@@ -35,6 +36,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
@@ -49,10 +51,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.app.ActivityCompat.recreate
+import androidx.navigation.NavHostController
+import com.example.smartrecept.R
 import java.io.File
 import java.io.FileOutputStream
 
@@ -60,6 +66,7 @@ import java.io.FileOutputStream
 fun SettingsScreen(
     repository: UserPreferencesRepository,
     modifier: Modifier = Modifier,
+    navController: NavHostController,
     scrollHandler: ScrollHandler,
     viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)),
 ) {
@@ -73,6 +80,8 @@ fun SettingsScreen(
     // Состояние экспорта
     val exportState by viewModel.exportState.collectAsState()
 
+    val text_save_file = stringResource(R.string.save_file)
+    val text_export_recipe = stringResource(R.string.export_recipes)
     // Функция для сохранения файла и запуска шеринга
     val saveAndShareFile: (String, String, String) -> Unit = { content, fileName, type ->
         try {
@@ -97,18 +106,18 @@ fun SettingsScreen(
                     else -> setType("text/plain")
                 }
                 putExtra(Intent.EXTRA_STREAM, fileUri)
-                putExtra(Intent.EXTRA_SUBJECT, "Экспорт рецептов")
+                putExtra(Intent.EXTRA_SUBJECT, text_export_recipe)
                 putExtra(Intent.EXTRA_TITLE, fileName)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
             // Запускаем диалог выбора приложения для сохранения/шеринга
-            context.startActivity(Intent.createChooser(shareIntent, "Сохранить файл"))
+            context.startActivity(Intent.createChooser(shareIntent, text_save_file))
 
-            Toast.makeText(context, "Файл готов к сохранению: $fileName", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.file_complete_to_work, fileName), Toast.LENGTH_LONG).show()
 
         } catch (e: Exception) {
-            Toast.makeText(context, "Ошибка при экспорте: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.err_export, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -134,8 +143,8 @@ fun SettingsScreen(
     if (showClearFavouriteDialog) {
         AlertDialog(
             onDismissRequest = { showClearFavouriteDialog = false },
-            title = { Text("Очистить избранное") },
-            text = { Text("Вы уверены, что хотите удалить все рецепты из избранного?") },
+            title = { Text(stringResource(R.string.clear_favourite)) },
+            text = { Text(stringResource(R.string.you_are_sure_clear_favourite)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -143,12 +152,12 @@ fun SettingsScreen(
                         showClearFavouriteDialog = false
                     }
                 ) {
-                    Text("Очистить", color = Color.Red)
+                    Text(stringResource(R.string.clear), color = Color.Red)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearFavouriteDialog = false }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -157,8 +166,8 @@ fun SettingsScreen(
     if (showExportDialog) {
         AlertDialog(
             onDismissRequest = { showExportDialog = false },
-            title = { Text("Выберите формат экспорта") },
-            text = { Text("В каком формате вы хотите экспортировать данные?") },
+            title = { Text(stringResource(R.string.settings_choose_format_export)) },
+            text = { Text(stringResource(R.string.settings_question_choose_format_export)) },
             confirmButton = {
                 Column {
                     Button(
@@ -188,7 +197,7 @@ fun SettingsScreen(
                         onClick = { showExportDialog = false },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Отмена")
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             },
@@ -199,8 +208,8 @@ fun SettingsScreen(
     if (showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
-            title = { Text("Очистить базу данных") },
-            text = { Text("Вы уверены, что хотите стереть все данные?") },
+            title = { Text(stringResource(R.string.settings_clear_database)) },
+            text = { Text(stringResource(R.string.settings_question_clear_database)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -209,12 +218,12 @@ fun SettingsScreen(
                         showClearAllDialog = false
                     }
                 ) {
-                    Text("Удалить", color = Color.Red)
+                    Text(stringResource(R.string.delete), color = Color.Red)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllDialog = false }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -228,10 +237,10 @@ fun SettingsScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Text("Настройки", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.title_settings), style = MaterialTheme.typography.headlineMedium)
 
         // Выбор темы оформление
-        Text("Тема", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMedium)
 
         val selectedTheme = preferences.themeMode
         val themeOptions = listOf("Light", "Dark", "System")
@@ -264,7 +273,7 @@ fun SettingsScreen(
         // Выбор масштаба / размера шрифта
         var fontSize by remember { mutableStateOf(FontSizeOption.M) }
 
-        Text("Масштаб", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.settings_scale), style = MaterialTheme.typography.titleMedium)
         FontSizeSelector(
             selectedSize = fontSize,
             onSizeSelected = {
@@ -276,20 +285,22 @@ fun SettingsScreen(
         Divider()
 
         // Выбор языка
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Язык", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = {
+        LanguageSelector(
+            currentLanguage = preferences.language,
+            onLanguageSelected = { newLang ->
                 scope.launch {
-                    val newLang = if (preferences.language == "en") "ru" else "en"
                     repository.updateLanguage(newLang)
+
+                    // ← ВОТ ЭТО ОБЯЗАТЕЛЬНО
+                    (context as? Activity)?.apply {
+                        overridePendingTransition(0, 0)
+                        recreate()
+                        overridePendingTransition(0, 0)
+                    }
+
                 }
-            }) {
-                Text(text = preferences.language.uppercase())
             }
-        }
+        )
 
         Divider()
 
@@ -403,7 +414,7 @@ fun DatabaseManagementPanel(
         modifier = modifier.padding(vertical = 16.dp)
     ) {
         Text(
-            text = "Управление базой данных",
+            text = stringResource(R.string.bd_title_remote),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -411,17 +422,17 @@ fun DatabaseManagementPanel(
 
         // Основные операции
         DatabaseOperationCard(
-            title = "Очистка данных",
-            description = "Управление содержимым базы данных",
+            title = stringResource(R.string.bd_clear_data),
+            description = stringResource(R.string.bd_remote),
             operations = listOf(
                 DatabaseOperation(
-                    title = "Удалить избранное",
+                    title = stringResource(R.string.bd_delete_favourite_data),
                     icon = Icons.Default.Favorite,
                     color = Color(0xFFFF6B6B),
                     onClick = onDeleteFavorites
                 ),
                 DatabaseOperation(
-                    title = "Удалить все рецепты",
+                    title = stringResource(R.string.bd_delete_allRecipe_data),
                     icon = Icons.Default.DeleteForever,
                     color = Color(0xFFE74C3C),
                     onClick = onDeleteAllRecipes
@@ -433,17 +444,17 @@ fun DatabaseManagementPanel(
 
         // Импорт/Экспорт
         DatabaseOperationCard(
-            title = "Импорт/Экспорт",
-            description = "Работа с внешними данными",
+            title = stringResource(R.string.bd_import_export_title),
+            description = stringResource(R.string.bd_work_external_data),
             operations = listOf(
                 DatabaseOperation(
-                    title = "Экспорт данных",
+                    title = stringResource(R.string.bd_export),
                     icon = Icons.Default.Download,
                     color = Color(0xFF3498DB),
                     onClick = onExportData
                 ),
                 DatabaseOperation(
-                    title = "Импорт данных",
+                    title = stringResource(R.string.bd_import),
                     icon = Icons.Default.Upload,
                     color = Color(0xFF2ECC71),
                     onClick = {
@@ -451,7 +462,7 @@ fun DatabaseManagementPanel(
                     }
                 ),
                 DatabaseOperation(
-                    title = "Шаблоны",
+                    title = stringResource(R.string.bd_templates),
                     icon = Icons.Default.Info,
                     color = Color(0xFF9B59B6),
                     onClick = { showDemoTemplate = true }
@@ -605,13 +616,13 @@ fun ImportFileDialog(
                         onImportCSV(fileContent)
                     } else {
                         // Эта ошибка теперь будет показываться только если расширение действительно другое
-                        Toast.makeText(context, "Неподдерживаемый формат файла. Выбран файл: $fileName", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.exept_unsupported_file_format, fileName ?: "Unknown"), Toast.LENGTH_LONG).show()
                     }
                 }
 
             } catch (e: Exception) {
                 // Обрабатываем возможные ошибки чтения файла
-                Toast.makeText(context, "Ошибка чтения файла: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.exept_err_read_file, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -628,14 +639,14 @@ fun ImportFileDialog(
                 horizontalAlignment = Alignment.CenterHorizontally // Центрируем для красоты
             ) {
                 Text(
-                    text = "Импорт данных",
+                    text = stringResource(R.string.bd_import),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
                 // Упрощаем UI: оставляем только одну кнопку для выбора файла
                 Text(
-                    text = "Выберите файл .json или .csv для импорта ваших рецептов.",
+                    text = stringResource(R.string.bd_choose_file_format_import),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 24.dp)
@@ -651,7 +662,7 @@ fun ImportFileDialog(
                 ) {
                     Icon(Icons.Default.FileOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Выбрать файл для импорта")
+                    Text(stringResource(R.string.bd_choose_file_import))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -660,7 +671,7 @@ fun ImportFileDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         }
@@ -676,9 +687,10 @@ fun ImportResultDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (result.success) "Импорт успешен" else "Ошибка импорта")
+            Text(if (result.success) stringResource(R.string.import_success) else stringResource(R.string.import_failed))
         },
         text = {
+//            stringResource(R.string.import_mess_text, importType, result.message)
             Text("$importType импорт: \n${result.message}")
         },
         confirmButton = {
@@ -743,13 +755,13 @@ fun DemoTemplateDialog(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = "Шаблоны для импорта",
+                    text = stringResource(R.string.import_templates),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
                 Text(
-                    text = "JSON формат:",
+                    text = stringResource(R.string.json_format),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -769,7 +781,7 @@ fun DemoTemplateDialog(
                 }
 
                 Text(
-                    text = "CSV формат:",
+                    text = stringResource(R.string.csv_format),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -792,8 +804,72 @@ fun DemoTemplateDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Понятно")
+                    Text("OK")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun LanguageSelector(
+    currentLanguage: String,
+    onLanguageSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val languages = listOf(
+        "system" to "Системный",
+        "ru" to "Русский",
+        "en" to "English",
+        "es" to "Español",
+        "fr" to "Français"
+    )
+
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Язык",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = languages.find { it.first == currentLanguage }?.second ?: currentLanguage,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.8f)
+        ) {
+            languages.forEach { (code, name) ->
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = {
+                        onLanguageSelected(code)
+                        expanded = false
+                    }
+                )
             }
         }
     }

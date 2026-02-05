@@ -18,8 +18,10 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavHostController
+import com.example.smartrecept.R
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.ui.components.CustomCard
@@ -48,16 +50,19 @@ fun FavoritesScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Избранное",
+                            text = stringResource(R.string.favorites_title),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(end = 64.dp), // Сдвигает текст вправо
-                            textAlign = TextAlign.Center, // Выравнивание текста внутри Text
+                                .padding(end = 64.dp),
+                            textAlign = TextAlign.Center,
                         )
                     },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(
+                                Icons.Default.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
                         }
                     },
                     actions = {}
@@ -73,7 +78,6 @@ fun FavoritesScreen(
                 navController = navController
             )
         }
-
     }
 }
 
@@ -85,7 +89,12 @@ fun FavoritesView(
     paddingValues: PaddingValues,
     viewModel: RecipeViewModel = viewModel(factory = RecipeViewModelFactory(LocalContext.current.applicationContext as Application)),
 ) {
-    Box(Modifier.fillMaxSize().padding(top = 56.dp), contentAlignment = Alignment.TopCenter) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(top = 56.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
         CustomCard(
             shape = RoundedCornerShape(bottomEnd = 28.dp, bottomStart = 28.dp),
             boxPadding = PaddingValues(vertical = 16.dp),
@@ -122,6 +131,24 @@ fun FavoritesView(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                         )
+                    }
+                }
+
+                // Показываем сообщение, если избранное пустое
+                if (recipes.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.no_favorites_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                 }
             }

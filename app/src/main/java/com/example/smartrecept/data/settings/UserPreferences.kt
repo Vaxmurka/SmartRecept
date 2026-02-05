@@ -7,6 +7,6 @@ data class UserPreferences(
     val isDarkTheme: Boolean = false,
     val fontScale: Float = 1.0f,
     val font: String = FontSizeOption.M.label,
-    val language: String = "ru",
+    val language: String = "system", // "system", "ru", "en", "es", etc.
     val themeMode: String = "system" // или "light", "dark"
 )

@@ -25,7 +25,7 @@ class UserPreferencesRepository(private val context: Context) {
             isDarkTheme = prefs[DARK_THEME_KEY] ?: false,
             fontScale = prefs[FONT_SCALE_KEY] ?: 1.0f,
             font = prefs[FONT_KEY] ?: FontSizeOption.M.label,
-            language = prefs[LANGUAGE_KEY] ?: "en",
+            language = prefs[LANGUAGE_KEY] ?: "system",
             themeMode = prefs[THEME_MODE] ?: "system"
         )
     }

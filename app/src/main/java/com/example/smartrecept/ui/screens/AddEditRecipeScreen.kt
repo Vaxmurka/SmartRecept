@@ -56,6 +56,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -75,6 +76,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.max
+import com.example.smartrecept.R
 
 // ----------------------------
 // Утилиты для сохранения фото
@@ -189,7 +191,15 @@ fun AddEditRecipeScreen(
             TopAppBar(
                 title = {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(if (recipeId == null) "Создание рецепта" else "Изменение рецепта")
+                        Text(
+                            stringResource(
+                                if (recipeId == null)
+                                    R.string.add_recipe
+                                else
+                                    R.string.edit_recipe
+                            )
+                        )
+
                     }
                 },
                 navigationIcon = {
@@ -221,7 +231,7 @@ fun AddEditRecipeScreen(
             OutlinedTextField(
                 value = recipeName,
                 onValueChange = { recipeName = it },
-                label = { Text("Название рецепта") },
+                label = { Text(stringResource(R.string.recipe_title)) },
                 placeholder = { Text("Паста карбонара") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -237,8 +247,8 @@ fun AddEditRecipeScreen(
                 OutlinedTextField(
                     value = cookTime,
                     onValueChange = { if (it.all { c -> c.isDigit() }) cookTime = it },
-                    label = { Text("Время") },
-                    trailingIcon = { Text("мин") },
+                    label = { Text(stringResource(R.string.recipe_time)) },
+                    trailingIcon = { Text(stringResource(R.string.minutes_short)) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
@@ -250,7 +260,7 @@ fun AddEditRecipeScreen(
                             newValue.toIntOrNull()?.let { num -> servings = num.coerceAtLeast(1) }
                         }
                     },
-                    label = { Text("Порции") },
+                    label = { Text(stringResource(R.string.servings_title)) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     trailingIcon = {
@@ -270,7 +280,7 @@ fun AddEditRecipeScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            Text("Ингредиенты", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.ingredients_title), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
 
             ingredients.forEachIndexed { index, ingredient ->
@@ -278,7 +288,7 @@ fun AddEditRecipeScreen(
                     OutlinedTextField(
                         value = ingredient,
                         onValueChange = { ingredients[index] = it },
-                        placeholder = { Text("Напишите что-нибудь...") },
+                        placeholder = { Text(stringResource(R.string.write_something)) },
                         modifier = Modifier.weight(1f)
                     )
                     if (ingredients.size > 1) {
@@ -290,12 +300,12 @@ fun AddEditRecipeScreen(
             }
             Button(onClick = { ingredients.add("") }) {
                 Icon(Icons.Default.Add, null)
-                Text("Новый ингредиент")
+                Text(stringResource(R.string.new_ingredient))
             }
 
             Spacer(Modifier.height(24.dp))
 
-            Text("Шаги", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.recipe_steps), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
 
             steps.forEachIndexed { index, step ->
@@ -312,7 +322,7 @@ fun AddEditRecipeScreen(
 
             Button(onClick = { steps.add(RecipeStep()) }) {
                 Icon(Icons.Default.Add, null)
-                Text("Новый шаг")
+                Text(stringResource(R.string.new_step))
             }
 
             Spacer(Modifier.height(24.dp))
@@ -378,7 +388,7 @@ fun StepWithImageBlock(
         OutlinedTextField(
             value = step.text,
             onValueChange = onStepTextChanged,
-            placeholder = { Text("Опишите этот шаг приготовления...") },
+            placeholder = { Text(stringResource(R.string.describe_step)) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 2
         )
@@ -440,7 +450,7 @@ fun StepImageBlock(
         if (granted) {
             launcherCamera.launch(photoUri)
         } else {
-            Toast.makeText(context, "Камера недоступна без разрешения", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.camera_not_available), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -469,7 +479,7 @@ fun StepImageBlock(
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.PhotoCamera, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
-                Text("Добавить фото", color = Color.Gray)
+                Text(stringResource(R.string.add_photo), color = Color.Gray)
             }
         }
     }
@@ -577,14 +587,14 @@ fun RecipeImageBlock(
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.PhotoCamera, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
-                Text("Добавить фото", color = Color.Gray)
+                Text(stringResource(R.string.add_photo), color = Color.Gray)
             }
         }
     }
 
     Spacer(Modifier.height(8.dp))
     Button(onClick = { showSheet = true }) {
-        Text(if (imageUri == null) "Добавить фото" else "Изменить фото")
+        Text(if (imageUri == null) stringResource(R.string.add_photo) else stringResource(R.string.change_photo))
     }
 
     if (showSheet) {
@@ -668,26 +678,26 @@ fun ImagePickerBottomSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Добавить фото",
+                stringResource(R.string.add_photo_title),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
             Button(
                 onClick = onPickCamera,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("📷 Камера") }
+            ) { Text(stringResource(R.string.camera)) }
             Button(
                 onClick = onPickGallery,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("🖼 Галерея") }
+            ) { Text(stringResource(R.string.gallery)) }
             Button(
                 onClick = { showUrlDialog = true },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("🌐 Вставить ссылку") }
+            ) { Text(stringResource(R.string.paste_link)) }
             OutlinedButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Отмена") }
+            ) { Text(stringResource(R.string.cancel)) }
         }
     }
 }
@@ -709,7 +719,7 @@ fun TagsInputField(
 
     Column(modifier = modifier) {
         // Заголовок
-        Text("Категории", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.categories), style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(8.dp))
 
         // Список выбранных тегов
@@ -758,7 +768,7 @@ fun TagsInputField(
                 OutlinedTextField(
                     value = newTagText,
                     onValueChange = { newTagText = it },
-                    label = { Text("Новый тег") },
+                    label = { Text(stringResource(R.string.new_tag_hint)) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -797,7 +807,7 @@ fun TagsInputField(
             ) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Добавить свой тег")
+                Text(stringResource(R.string.add_custom_tag))
             }
         }
     }

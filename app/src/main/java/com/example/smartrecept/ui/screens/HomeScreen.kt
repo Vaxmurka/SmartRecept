@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.smartrecept.data.settings.UserPreferencesRepository
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +26,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.smartrecept.R
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.filterChipsList
@@ -78,7 +80,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = "Добавить рецепт",
+                            contentDescription = stringResource(R.string.add_recipe),
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -245,6 +247,24 @@ fun HomeScreenContent(
                 )
             }
         }
+
+        // Показываем сообщение, если нет рецептов
+        if (filteredRecipes.isEmpty() && recipes.isNotEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.no_recipes_match_filters),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -283,7 +303,17 @@ fun RecipeInDay(
             FilterChips(selectedFilter, onFilterChange, allTags)
             recipeDay?.let { recipe ->
                 RecipeDayCard(recipe = recipe, navController = navController)
-            } ?: Text("Нет доступных рецептов", modifier = Modifier.padding(16.dp))
+            } ?: Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.no_available_recipes),
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }
 
     }

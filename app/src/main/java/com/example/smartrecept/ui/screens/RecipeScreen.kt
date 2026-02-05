@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.app.Application
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.example.smartrecept.R
 import com.example.smartrecept.data.recipes.Recipe
 import com.example.smartrecept.data.settings.UserPreferences
 import com.example.smartrecept.data.settings.UserPreferencesRepository
@@ -76,12 +78,35 @@ fun RecipeDetailScreen(
 
 @Composable
 fun LoadingScreen() {
-
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
 }
 
 @Composable
 fun ErrorScreen() {
-
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.Error,
+                contentDescription = stringResource(R.string.error),
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.error_loading_recipe),
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,7 +133,7 @@ private fun RecipeDetailContent(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -120,7 +145,7 @@ private fun RecipeDetailContent(
                         Icon(
                             imageVector = if (recipe.isFavorite) Icons.Default.Favorite
                             else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favourite",
+                            contentDescription = stringResource(R.string.toggle_favorite),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -128,7 +153,7 @@ private fun RecipeDetailContent(
             )
         }
     ) { padding ->
-        var servingCoefficient by remember { mutableFloatStateOf(1f) } // Коэффициент изменения
+        var servingCoefficient by remember { mutableFloatStateOf(1f) }
         Column(
             modifier = modifier
                 .padding(padding)
@@ -172,7 +197,10 @@ private fun RecipeDetailContent(
                                     tint = MaterialTheme.colorScheme.onSecondary
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text("${recipe.time} мин", color = MaterialTheme.colorScheme.onSecondary)
+                                Text(
+                                    stringResource(R.string.minutes_format, recipe.time),
+                                    color = MaterialTheme.colorScheme.onSecondary
+                                )
                             },
                             colors = AssistChipDefaults.assistChipColors(
                                 containerColor = MaterialTheme.colorScheme.secondary
@@ -183,19 +211,9 @@ private fun RecipeDetailContent(
                             )
                         )
 
-                        fun calcServings(count: Int): String {
-                            return when(count) {
-                                1 -> "порция"
-                                2, 3, 4 -> "порции"
-                                else -> "порций"
-                            }
-                        }
-
                         var expanded by remember { mutableStateOf(false) }
                         var selectedServings by remember { mutableIntStateOf(recipe.servings) }
                         val portionOptions = remember(selectedServings) { getPortionOptions(selectedServings) }
-                        var servingsStr = calcServings(selectedServings)
-                        LaunchedEffect(selectedServings) { servingsStr = calcServings(selectedServings) }
 
                         Box {
                             AssistChip(
@@ -210,7 +228,7 @@ private fun RecipeDetailContent(
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            "$selectedServings $servingsStr",
+                                            stringResource(R.string.servings_format, selectedServings),
                                             color = MaterialTheme.colorScheme.onTertiary
                                         )
                                     }
@@ -225,7 +243,7 @@ private fun RecipeDetailContent(
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.ArrowDropDown,
-                                        contentDescription = "Выбрать порции",
+                                        contentDescription = stringResource(R.string.select_servings),
                                         tint = MaterialTheme.colorScheme.onTertiary
                                     )
                                 }
@@ -235,14 +253,14 @@ private fun RecipeDetailContent(
                             DropdownMenu(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false },
-                                modifier = Modifier.width(120.dp)
+                                modifier = Modifier.width(140.dp)
                             ) {
                                 // Текущее значение (неактивное)
                                 DropdownMenuItem(
                                     onClick = {},
                                     text = {
                                         Text(
-                                            "$selectedServings порц. (текущее)",
+                                            stringResource(R.string.current_servings, selectedServings),
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
                                     },
@@ -261,7 +279,7 @@ private fun RecipeDetailContent(
                                             expanded = false
                                         },
                                         text = {
-                                            Text("$option порц.")
+                                            Text(stringResource(R.string.portions_format, option))
                                             Spacer(Modifier.width(8.dp))
                                         }
                                     )
@@ -276,7 +294,7 @@ private fun RecipeDetailContent(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit"
+                                    contentDescription = stringResource(R.string.edit)
                                 )
                             }
                         }
@@ -302,7 +320,9 @@ private fun RecipeDetailContent(
                                 .align(Alignment.CenterVertically)
                         ) {
                             Text(
-                                text = if (recipe.isCooked) "Опыт в приготовлении уже есть" else "Будем делать впервые",
+                                text = if (recipe.isCooked)
+                                    stringResource(R.string.already_cooked_experience)
+                                else stringResource(R.string.first_time_cooking),
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Start
                             )
@@ -312,7 +332,7 @@ private fun RecipeDetailContent(
                         ) {
                             Icon(
                                 imageVector = if (recipe.isCooked) Icons.Default.CheckCircle else Icons.Default.CheckCircleOutline,
-                                contentDescription = "Done",
+                                contentDescription = stringResource(R.string.toggle_cooked),
                                 tint = if (recipe.isCooked) Color.Green else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(50.dp)
                             )
@@ -321,7 +341,7 @@ private fun RecipeDetailContent(
 
                     if (recipe.notes.isNotEmpty()) {
                         CollapsibleCard(
-                            title = "Заметки",
+                            title = stringResource(R.string.notes_title),
                             initiallyExpanded = true,
                             outPadding = PaddingValues(bottom = 16.dp, top = 4.dp)
                         ) {
@@ -348,7 +368,7 @@ private fun RecipeDetailContent(
             ) {
                 Column {
                     Text(
-                        "Ингредиенты",
+                        stringResource(R.string.ingredients_title),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -371,7 +391,7 @@ private fun RecipeDetailContent(
             CustomCard(boxPadding = PaddingValues(vertical = 30.dp, horizontal = 25.dp)) {
                 Column {
                     Text(
-                        "Способ приготовления",
+                        stringResource(R.string.cooking_method_title),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -404,7 +424,7 @@ private fun RecipeDetailContent(
                         .height(50.dp)
                         .padding(horizontal = 16.dp)
                 ) {
-                    Text("Начать готовить")
+                    Text(stringResource(R.string.start_cooking))
                 }
             }
 
@@ -425,7 +445,6 @@ fun getPortionOptions(current: Int): List<Int> {
         .filter { it > 0 && it != current }
         .sorted()
 }
-
 
 // Функция для масштабирования количества ингредиента
 fun scaleIngredient(ingredient: String, coefficient: Float): String {
